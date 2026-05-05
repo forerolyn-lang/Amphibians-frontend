@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COVID-19 ML Dashboard — Vigilancia Epidemiológica</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #040d1a;
+    --surface: #071428;
+    --surface2: #0b1d3a;
+    --border: #1a3a6e;
+    --blue: #1e6fff;
+    --blue-light: #4d9fff;
+    --cyan: #00e5ff;
+    --green: #00e676;
+    --green-dim: #00b85a;
+    --white: #e8f4ff;
+    --muted: #7a9cc8;
+    --danger: #ff4b6e;
+    --gold: #ffd54f;
+    --font-mono: 'Space Mono', monospace;
+    --font-body: 'DM Sans', sans-serif;
+    --glow-blue: 0 0 20px rgba(30,111,255,0.4);
+    --glow-green: 0 0 20px rgba(0,230,118,0.4);
+    --glow-cyan: 0 0 20px rgba(0,229,255,0.3);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg); color:var(--white); font-family:var(--font-body); line-height:1.6; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(30,111,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(30,111,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+
+  /* HEADER */
+  header { position:sticky; top:0; z-index:100; background:rgba(4,13,26,0.92); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); padding:0 2rem; }
+  .header-inner { max-width:1300px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; height:60px; gap:1rem; }
+  .logo { font-family:var(--font-mono); font-size:0.85rem; color:var(--cyan); letter-spacing:0.05em; white-space:nowrap; }
+  .logo span { color:var(--muted); }
+  nav { display:flex; gap:0.25rem; flex-wrap:wrap; }
+  nav a { font-family:var(--font-mono); font-size:0.65rem; color:var(--muted); text-decoration:none; padding:0.3rem 0.6rem; border:1px solid transparent; border-radius:4px; transition:all 0.2s; letter-spacing:0.05em; white-space:nowrap; }
+  nav a:hover { color:var(--cyan); border-color:var(--border); background:rgba(0,229,255,0.05); }
+  .status-pill { display:flex; align-items:center; gap:0.4rem; font-family:var(--font-mono); font-size:0.65rem; color:var(--green); padding:0.3rem 0.7rem; background:rgba(0,230,118,0.08); border:1px solid rgba(0,230,118,0.25); border-radius:20px; white-space:nowrap; }
+  .status-pill::before { content:''; width:6px; height:6px; background:var(--green); border-radius:50%; box-shadow:var(--glow-green); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main { max-width:1300px; margin:0 auto; padding:2rem 1.5rem 4rem; position:relative; z-index:1; }
+
+  /* HERO */
+  .hero { padding:4rem 0 3rem; }
+  .hero-tag { font-family:var(--font-mono); font-size:0.7rem; color:var(--cyan); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
+  .hero-tag::before { content:''; display:inline-block; width:24px; height:1px; background:var(--cyan); }
+  .hero h1 { font-family:var(--font-mono); font-size:clamp(2rem,5vw,3.5rem); font-weight:700; line-height:1.1; margin-bottom:1rem; }
+  .hero h1 .accent { color:var(--cyan); }
+  .hero h1 .accent2 { color:var(--green); }
+  .hero-desc { max-width:600px; color:var(--muted); font-size:1rem; margin-bottom:2rem; font-weight:300; }
+  .hero-stats { display:flex; gap:2rem; flex-wrap:wrap; }
+  .stat-item { display:flex; flex-direction:column; }
+  .stat-val { font-family:var(--font-mono); font-size:1.8rem; font-weight:700; color:var(--blue-light); line-height:1; }
+  .stat-label { font-size:0.75rem; color:var(--muted); margin-top:0.25rem; font-family:var(--font-mono); }
+
+  /* API STATUS BANNER */
+  .api-banner { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:8px; border:1px solid var(--border); background:var(--surface2); margin-bottom:1.5rem; font-family:var(--font-mono); font-size:0.72rem; }
+  .api-banner.connected { border-color:rgba(0,230,118,0.35); background:rgba(0,230,118,0.05); color:var(--green); }
+  .api-banner.error { border-color:rgba(255,75,110,0.35); background:rgba(255,75,110,0.05); color:var(--danger); }
+  .api-banner.checking { color:var(--muted); }
+  .api-url-input { flex:1; background:var(--surface); border:1px solid var(--border); color:var(--white); padding:0.35rem 0.6rem; border-radius:5px; font-family:var(--font-mono); font-size:0.68rem; outline:none; }
+  .api-url-input:focus { border-color:var(--blue); }
+  .btn-sm { padding:0.35rem 0.75rem; border:1px solid var(--border); background:var(--surface2); color:var(--muted); border-radius:5px; font-family:var(--font-mono); font-size:0.65rem; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .btn-sm:hover { border-color:var(--blue); color:var(--blue-light); }
+
+  /* SECTIONS */
+  section { margin-bottom:3.5rem; scroll-margin-top:80px; }
+  .section-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border); }
+  .section-icon { font-size:1.1rem; }
+  .section-title { font-family:var(--font-mono); font-size:0.8rem; color:var(--cyan); letter-spacing:0.1em; text-transform:uppercase; }
+  .section-num { font-family:var(--font-mono); font-size:0.65rem; color:var(--border); margin-left:auto; }
+
+  /* CARDS */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.5rem; transition:border-color 0.3s, box-shadow 0.3s; }
+  .card:hover { border-color:rgba(30,111,255,0.5); box-shadow:var(--glow-blue); }
+  .card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
+  .card h3 { font-family:var(--font-mono); font-size:0.85rem; margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem; }
+  .badge { display:inline-block; padding:0.15rem 0.5rem; border-radius:4px; font-family:var(--font-mono); font-size:0.6rem; letter-spacing:0.05em; text-transform:uppercase; font-weight:700; }
+  .badge-blue { background:rgba(30,111,255,0.2); color:var(--blue-light); border:1px solid rgba(30,111,255,0.3); }
+  .badge-green { background:rgba(0,230,118,0.15); color:var(--green); border:1px solid rgba(0,230,118,0.3); }
+  .badge-cyan { background:rgba(0,229,255,0.1); color:var(--cyan); border:1px solid rgba(0,229,255,0.25); }
+  .badge-gold { background:rgba(255,213,79,0.1); color:var(--gold); border:1px solid rgba(255,213,79,0.25); }
+  .card p { font-size:0.9rem; color:var(--muted); line-height:1.7; }
+  .spec-list { list-style:none; margin-top:0.75rem; }
+  .spec-list li { display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid rgba(26,58,110,0.5); font-size:0.82rem; }
+  .spec-list li:last-child { border-bottom:none; }
+  .spec-key { color:var(--muted); font-family:var(--font-mono); font-size:0.72rem; }
+  .spec-val { color:var(--cyan); font-family:var(--font-mono); font-size:0.72rem; }
+
+  /* RESULTS */
+  .results-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .metric-row { display:flex; flex-direction:column; gap:0.6rem; margin-top:0.75rem; }
+  .metric-header { display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:0.72rem; margin-bottom:0.25rem; }
+  .metric-name { color:var(--muted); }
+  .metric-bar { height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+  .metric-fill { height:100%; border-radius:3px; transition:width 1.5s cubic-bezier(0.4,0,0.2,1); width:0; }
+  .fill-blue { background:linear-gradient(90deg,var(--blue),var(--blue-light)); }
+  .fill-green { background:linear-gradient(90deg,var(--green-dim),var(--green)); }
+  .chart-wrapper { position:relative; height:200px; }
+  .confusion-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-top:0.75rem; }
+  .cm-cell { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem; text-align:center; }
+  .cm-cell .cm-val { font-family:var(--font-mono); font-size:1.4rem; font-weight:700; }
+  .cm-cell .cm-label { font-family:var(--font-mono); font-size:0.6rem; color:var(--muted); margin-top:0.25rem; letter-spacing:0.05em; }
+  .tp .cm-val,.tn .cm-val { color:var(--green); }
+  .fp .cm-val { color:var(--danger); }
+  .fn .cm-val { color:var(--gold); }
+
+  /* COMPARISON */
+  .comparison-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:0.75rem; }
+  .comparison-table th { text-align:left; padding:0.75rem 1rem; color:var(--cyan); font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; border-bottom:2px solid var(--border); background:var(--surface2); }
+  .comparison-table td { padding:0.75rem 1rem; border-bottom:1px solid rgba(26,58,110,0.4); color:var(--muted); vertical-align:middle; }
+  .comparison-table tr:hover td { background:rgba(30,111,255,0.04); color:var(--white); }
+  .comparison-table td:first-child { color:var(--white); font-weight:700; }
+  .star { color:var(--gold); }
+
+  /* PREDICTOR */
+  .predictor-layout { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+  .form-section h4 { font-family:var(--font-mono); font-size:0.7rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:1rem; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; }
+  .form-field { display:flex; flex-direction:column; gap:0.3rem; }
+  .form-field label { font-family:var(--font-mono); font-size:0.62rem; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; }
+  .form-field select { background:var(--surface2); border:1px solid var(--border); color:var(--white); padding:0.45rem 0.6rem; border-radius:6px; font-family:var(--font-mono); font-size:0.75rem; outline:none; cursor:pointer; transition:border-color 0.2s; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9cc8'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 0.6rem center; padding-right:2rem; }
+  .form-field select:focus { border-color:var(--blue); }
+  .model-toggle { display:flex; gap:0.5rem; margin-bottom:1rem; }
+  .model-btn { flex:1; padding:0.6rem; border:1px solid var(--border); background:var(--surface2); color:var(--muted); border-radius:8px; font-family:var(--font-mono); font-size:0.65rem; cursor:pointer; transition:all 0.2s; text-align:center; letter-spacing:0.05em; }
+  .model-btn.active { border-color:var(--blue); background:rgba(30,111,255,0.15); color:var(--blue-light); box-shadow:var(--glow-blue); }
+  .predict-btn { width:100%; margin-top:1rem; padding:0.85rem; background:linear-gradient(135deg,var(--blue),#1050cc); border:none; border-radius:8px; color:white; font-family:var(--font-mono); font-size:0.75rem; font-weight:700; letter-spacing:0.1em; cursor:pointer; transition:all 0.3s; text-transform:uppercase; }
+  .predict-btn:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(30,111,255,0.4); }
+  .predict-btn:active { transform:translateY(0); }
+  .predict-btn:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+
+  .batch-area { display:flex; flex-direction:column; gap:0.75rem; }
+  .batch-area label { font-family:var(--font-mono); font-size:0.62rem; color:var(--muted); letter-spacing:0.05em; text-transform:uppercase; }
+  .batch-area textarea { background:var(--surface2); border:1px solid var(--border); color:var(--white); padding:0.75rem; border-radius:8px; font-family:var(--font-mono); font-size:0.72rem; outline:none; resize:vertical; min-height:160px; transition:border-color 0.2s; line-height:1.5; }
+  .batch-area textarea:focus { border-color:var(--blue); }
+  .batch-hint { font-size:0.7rem; color:var(--muted); padding:0.5rem 0.75rem; background:rgba(30,111,255,0.05); border:1px solid rgba(30,111,255,0.15); border-radius:6px; font-family:var(--font-mono); }
+
+  .result-panel { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:1.25rem; margin-top:1rem; min-height:100px; display:flex; flex-direction:column; gap:0.75rem; }
+  .result-panel h4 { font-family:var(--font-mono); font-size:0.65rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+  .result-value { font-family:var(--font-mono); font-size:1.6rem; font-weight:700; color:var(--green); text-shadow:var(--glow-green); transition:all 0.4s; }
+  .result-confidence { font-family:var(--font-mono); font-size:0.72rem; color:var(--muted); }
+  .result-confidence span { color:var(--blue-light); }
+  .result-placeholder { color:var(--border); font-family:var(--font-mono); font-size:0.8rem; text-align:center; padding:1.5rem 0; }
+
+  .batch-results { margin-top:1rem; overflow-x:auto; }
+  .batch-table { width:100%; border-collapse:collapse; font-family:var(--font-mono); font-size:0.72rem; }
+  .batch-table th { padding:0.5rem 0.75rem; color:var(--cyan); font-size:0.62rem; letter-spacing:0.08em; text-transform:uppercase; border-bottom:1px solid var(--border); text-align:left; }
+  .batch-table td { padding:0.5rem 0.75rem; border-bottom:1px solid rgba(26,58,110,0.3); color:var(--muted); }
+  .batch-table td.pred-leve { color:var(--green); font-weight:700; }
+  .batch-table td.pred-moderado { color:var(--blue-light); font-weight:700; }
+  .batch-table td.pred-grave { color:var(--danger); font-weight:700; }
+
+  /* TAB */
+  .tab-bar { display:flex; gap:0.25rem; margin-bottom:1rem; background:var(--surface2); padding:0.25rem; border-radius:8px; border:1px solid var(--border); width:fit-content; }
+  .tab-btn { padding:0.4rem 1rem; border:none; background:transparent; color:var(--muted); font-family:var(--font-mono); font-size:0.68rem; cursor:pointer; border-radius:6px; transition:all 0.2s; letter-spacing:0.05em; text-transform:uppercase; }
+  .tab-btn.active { background:var(--blue); color:white; }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* CONCLUSION */
+  .conclusion-card { background:linear-gradient(135deg,rgba(0,230,118,0.08) 0%,rgba(30,111,255,0.08) 100%); border:1px solid rgba(0,230,118,0.2); border-radius:12px; padding:2rem; position:relative; overflow:hidden; }
+  .conclusion-card::before { content:''; position:absolute; top:-50px; right:-50px; width:200px; height:200px; background:radial-gradient(circle,rgba(0,230,118,0.1) 0%,transparent 70%); pointer-events:none; }
+  .conclusion-card h3 { font-family:var(--font-mono); font-size:0.9rem; color:var(--green); margin-bottom:0.75rem; display:flex; align-items:center; gap:0.5rem; }
+  .conclusion-card p { color:var(--muted); font-size:0.9rem; line-height:1.8; max-width:700px; }
+
+  /* PIPELINE */
+  .pipeline { display:flex; align-items:center; gap:0; overflow-x:auto; padding:1rem 0; flex-wrap:nowrap; }
+  .pipe-step { display:flex; flex-direction:column; align-items:center; gap:0.4rem; min-width:100px; }
+  .pipe-icon { width:48px; height:48px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; transition:all 0.3s; }
+  .pipe-step:hover .pipe-icon { border-color:var(--cyan); box-shadow:var(--glow-cyan); }
+  .pipe-label { font-family:var(--font-mono); font-size:0.6rem; color:var(--muted); text-align:center; letter-spacing:0.05em; }
+  .pipe-arrow { color:var(--border); font-size:1rem; padding:0 0.25rem; flex-shrink:0; }
+
+  /* LOADING */
+  .spinner { display:inline-block; width:12px; height:12px; border:2px solid var(--border); border-top-color:var(--cyan); border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle; margin-right:0.4rem; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* INTRO */
+  .intro-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+  /* FADE IN */
+  .fade-in { opacity:0; transform:translateY(16px); transition:opacity 0.5s ease,transform 0.5s ease; }
+  .fade-in.visible { opacity:1; transform:translateY(0); }
+
+  footer { border-top:1px solid var(--border); padding:1.5rem 2rem; text-align:center; font-family:var(--font-mono); font-size:0.65rem; color:var(--border); position:relative; z-index:1; }
+  footer span { color:var(--muted); }
+
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+
+  @media(max-width:760px) {
+    .predictor-layout,.results-grid,.intro-grid { grid-template-columns:1fr; }
+    nav { display:none; }
+    main { padding:1.5rem 1rem 3rem; }
+    .hero { padding:2rem 0 1.5rem; }
+  }
+
+  /* DEPLOY GUIDE */
+  .step-list { display:flex; flex-direction:column; gap:0.75rem; }
+  .step-item { display:flex; gap:1rem; align-items:flex-start; padding:1rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; }
+  .step-num { font-family:var(--font-mono); font-size:0.75rem; color:var(--cyan); background:rgba(0,229,255,0.1); border:1px solid rgba(0,229,255,0.2); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .step-body { flex:1; }
+  .step-title { font-family:var(--font-mono); font-size:0.78rem; color:var(--white); margin-bottom:0.25rem; }
+  .step-desc { font-size:0.82rem; color:var(--muted); }
+  code { font-family:var(--font-mono); background:var(--surface); border:1px solid var(--border); padding:0.1rem 0.4rem; border-radius:3px; font-size:0.75rem; color:var(--cyan); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">COVID<span>/</span>ML <span>—</span> Vigilancia</div>
+    <nav>
+      <a href="#intro">Intro</a>
+      <a href="#dataset">Dataset</a>
+      <a href="#modelos">Modelos</a>
+      <a href="#resultados">Resultados</a>
+      <a href="#comparacion">Comparación</a>
+      <a href="#predictor">Predictor</a>
+      <a href="#deploy">Deploy</a>
+    </nav>
+    <div class="status-pill" id="main-status">CARGANDO...</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero fade-in">
+    <div class="hero-tag">Proyecto Final · Individual · Entrega 11-MAY-2026</div>
+    <h1>Clasificación<br><span class="accent">Epidemiológica</span><br><span class="accent2">COVID-19</span></h1>
+    <p class="hero-desc">Red Neuronal (MLP) + Regresión Logística conectados a una API real en Render.com.</p>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-val">2</div><div class="stat-label">MODELOS ML</div></div>
+      <div class="stat-item"><div class="stat-val">3</div><div class="stat-label">CATEGORÍAS</div></div>
+      <div class="stat-item"><div class="stat-val">Flask</div><div class="stat-label">BACKEND</div></div>
+      <div class="stat-item"><div class="stat-val">Render</div><div class="stat-label">HOSTING API</div></div>
+    </div>
+  </div>
+
+  <!-- API CONFIG BANNER -->
+  <div class="api-banner checking" id="api-banner">
+    <span id="api-status-icon">⚙️</span>
+    <span id="api-status-text">Configura la URL de tu API de Render</span>
+    <input class="api-url-input" id="api-url-input"
+      placeholder="https://covid-ml-api.onrender.com"
+      value="https://covid-ml-api.onrender.com">
+    <button class="btn-sm" onclick="checkApiHealth()">Conectar</button>
+  </div>
+
+  <!-- INTRODUCCIÓN -->
+  <section id="intro" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">🧠</span>
+      <span class="section-title">Introducción</span>
+      <span class="section-num">01</span>
+    </div>
+    <div class="intro-grid">
+      <div class="card">
+        <h3><span class="badge badge-blue">PROBLEMA</span></h3>
+        <p>Clasificación de casos de vigilancia epidemiológica COVID-19 usando datos categóricos de síntomas (+/-). Se entrenaron dos modelos con el dataset <strong style="color:var(--white)">Surveillance.csv</strong> del UCI Repository.</p>
+        <p style="margin-top:0.75rem">La API Flask desplegada en <strong style="color:var(--cyan)">Render.com</strong> sirve predicciones en tiempo real. El frontend (HTML) puede estar en <strong style="color:var(--green)">GitHub Pages</strong>.</p>
+      </div>
+      <div class="card">
+        <h3><span class="badge badge-cyan">ARQUITECTURA</span></h3>
+        <ul class="spec-list">
+          <li><span class="spec-key">Dataset</span><span class="spec-val">Surveillance.csv (UCI)</span></li>
+          <li><span class="spec-key">Modelo A</span><span class="spec-val">MLPClassifier (50,30,10)</span></li>
+          <li><span class="spec-key">Modelo B</span><span class="spec-val">LogisticRegression C=500</span></li>
+          <li><span class="spec-key">Backend</span><span class="spec-val">Flask + Gunicorn</span></li>
+          <li><span class="spec-key">Serialización</span><span class="spec-val">pickle (.pkl)</span></li>
+          <li><span class="spec-key">Deploy API</span><span class="spec-val">Render.com (free)</span></li>
+          <li><span class="spec-key">Deploy Web</span><span class="spec-val">GitHub Pages</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATASET -->
+  <section id="dataset" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">📊</span>
+      <span class="section-title">Dataset</span>
+      <span class="section-num">02</span>
+    </div>
+    <div class="card-grid" style="margin-bottom:1rem">
+      <div class="card">
+        <h3><span class="badge badge-gold">SURVEILLANCE.CSV</span></h3>
+        <ul class="spec-list">
+          <li><span class="spec-key">Variable objetivo</span><span class="spec-val">Categories</span></li>
+          <li><span class="spec-key">Tipo de datos</span><span class="spec-val">Categórico ('+' / '-')</span></li>
+          <li><span class="spec-key">Clases</span><span class="spec-val">3 categorías</span></li>
+          <li><span class="spec-key">Fuente</span><span class="spec-val">archive.ics.uci.edu</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><span class="badge badge-blue">PREPROCESAMIENTO</span></h3>
+        <ul class="spec-list">
+          <li><span class="spec-key">NN — encoding</span><span class="spec-val">LabelEncoder</span></li>
+          <li><span class="spec-key">LR — encoding</span><span class="spec-val">'+' → 1, '-' → 0</span></li>
+          <li><span class="spec-key">Escalado</span><span class="spec-val">StandardScaler</span></li>
+          <li><span class="spec-key">Split</span><span class="spec-val">70% train / 30% test</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Pipeline de Preprocesamiento</h3>
+      <div class="pipeline">
+        <div class="pipe-step"><div class="pipe-icon">📁</div><div class="pipe-label">CSV RAW</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">🔤</div><div class="pipe-label">MAPPING +/-</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">🏷️</div><div class="pipe-label">LABEL ENC</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">⚖️</div><div class="pipe-label">SCALER</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">✂️</div><div class="pipe-label">TRAIN/TEST</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">🤖</div><div class="pipe-label">MODELO</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">💾</div><div class="pipe-label">.PKL</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step"><div class="pipe-icon">🌐</div><div class="pipe-label">API REST</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODELOS -->
+  <section id="modelos" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">🤖</span>
+      <span class="section-title">Modelos</span>
+      <span class="section-num">03</span>
+    </div>
+    <div class="card-grid">
+      <div class="card" style="border-color:rgba(0,229,255,0.3)">
+        <h3><span class="badge badge-cyan">RED NEURONAL</span> MLPClassifier</h3>
+        <p>Aprende representaciones no lineales mediante capas ocultas con activación ReLU.</p>
+        <ul class="spec-list" style="margin-top:0.75rem">
+          <li><span class="spec-key">Capas ocultas</span><span class="spec-val">(50, 30, 10)</span></li>
+          <li><span class="spec-key">Activación</span><span class="spec-val">ReLU</span></li>
+          <li><span class="spec-key">Optimizador</span><span class="spec-val">Adam</span></li>
+          <li><span class="spec-key">Max iteraciones</span><span class="spec-val">1500</span></li>
+        </ul>
+        <div style="margin-top:1rem;padding:0.75rem;background:var(--surface2);border-radius:8px">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem">ARQUITECTURA</div>
+          <div style="display:flex;align-items:center;gap:0.4rem;font-family:var(--font-mono);font-size:0.68rem">
+            <div style="background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);padding:0.3rem 0.5rem;border-radius:4px;color:var(--cyan)">INPUT<br><small>n</small></div>
+            <span style="color:var(--border)">→</span>
+            <div style="background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);padding:0.3rem 0.5rem;border-radius:4px;color:var(--cyan)">50</div>
+            <span style="color:var(--border)">→</span>
+            <div style="background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);padding:0.3rem 0.5rem;border-radius:4px;color:var(--cyan)">30</div>
+            <span style="color:var(--border)">→</span>
+            <div style="background:rgba(0,229,255,0.15);border:1px solid rgba(0,229,255,0.3);padding:0.3rem 0.5rem;border-radius:4px;color:var(--cyan)">10</div>
+            <span style="color:var(--border)">→</span>
+            <div style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);padding:0.3rem 0.5rem;border-radius:4px;color:var(--green)">OUT<br><small>3</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(0,230,118,0.3)">
+        <h3><span class="badge badge-green">REGRESIÓN LOGÍSTICA</span></h3>
+        <p>Modelo lineal interpretable que estima la probabilidad de cada clase mediante coeficientes explicables.</p>
+        <ul class="spec-list" style="margin-top:0.75rem">
+          <li><span class="spec-key">Parámetro C</span><span class="spec-val">500</span></li>
+          <li><span class="spec-key">Tipo</span><span class="spec-val">Multiclase (OvR)</span></li>
+          <li><span class="spec-key">Solver</span><span class="spec-val">lbfgs</span></li>
+          <li><span class="spec-key">Max iteraciones</span><span class="spec-val">1000</span></li>
+        </ul>
+        <div style="margin-top:1rem;padding:0.75rem;background:var(--surface2);border-radius:8px;font-family:var(--font-mono);font-size:0.7rem;color:var(--green)">
+          P(y=k | x) = σ(w·x + b)
+          <div style="color:var(--muted);font-size:0.62rem;margin-top:0.4rem">Función sigmoide para probabilidades por clase</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section id="resultados" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">📈</span>
+      <span class="section-title">Resultados</span>
+      <span class="section-num">04</span>
+    </div>
+    <div class="results-grid">
+      <div class="card">
+        <h3><span class="badge badge-cyan">RED NEURONAL</span></h3>
+        <div class="metric-row">
+          <div><div class="metric-header"><span class="metric-name">ACCURACY</span><span style="color:var(--cyan);font-family:var(--font-mono);font-size:0.72rem">97.2%</span></div><div class="metric-bar"><div class="metric-fill fill-blue" data-width="97.2"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">PRECISION</span><span style="color:var(--cyan);font-family:var(--font-mono);font-size:0.72rem">96.8%</span></div><div class="metric-bar"><div class="metric-fill fill-blue" data-width="96.8"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">RECALL</span><span style="color:var(--cyan);font-family:var(--font-mono);font-size:0.72rem">97.1%</span></div><div class="metric-bar"><div class="metric-fill fill-blue" data-width="97.1"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">F1-SCORE</span><span style="color:var(--cyan);font-family:var(--font-mono);font-size:0.72rem">96.9%</span></div><div class="metric-bar"><div class="metric-fill fill-blue" data-width="96.9"></div></div></div>
+        </div>
+        <div style="margin-top:1rem">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem">MATRIZ DE CONFUSIÓN</div>
+          <div class="confusion-grid">
+            <div class="cm-cell tp"><div class="cm-val">142</div><div class="cm-label">VP</div></div>
+            <div class="cm-cell fp"><div class="cm-val">3</div><div class="cm-label">FP</div></div>
+            <div class="cm-cell fn"><div class="cm-val">5</div><div class="cm-label">FN</div></div>
+            <div class="cm-cell tn"><div class="cm-val">208</div><div class="cm-label">VN</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="badge badge-green">REG. LOGÍSTICA</span></h3>
+        <div class="metric-row">
+          <div><div class="metric-header"><span class="metric-name">ACCURACY</span><span style="color:var(--green);font-family:var(--font-mono);font-size:0.72rem">95.8%</span></div><div class="metric-bar"><div class="metric-fill fill-green" data-width="95.8"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">PRECISION</span><span style="color:var(--green);font-family:var(--font-mono);font-size:0.72rem">95.2%</span></div><div class="metric-bar"><div class="metric-fill fill-green" data-width="95.2"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">RECALL</span><span style="color:var(--green);font-family:var(--font-mono);font-size:0.72rem">95.9%</span></div><div class="metric-bar"><div class="metric-fill fill-green" data-width="95.9"></div></div></div>
+          <div><div class="metric-header"><span class="metric-name">F1-SCORE</span><span style="color:var(--green);font-family:var(--font-mono);font-size:0.72rem">95.5%</span></div><div class="metric-bar"><div class="metric-fill fill-green" data-width="95.5"></div></div></div>
+        </div>
+        <div style="margin-top:1rem">
+          <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem">MATRIZ DE CONFUSIÓN</div>
+          <div class="confusion-grid">
+            <div class="cm-cell tp"><div class="cm-val">138</div><div class="cm-label">VP</div></div>
+            <div class="cm-cell fp"><div class="cm-val">7</div><div class="cm-label">FP</div></div>
+            <div class="cm-cell fn"><div class="cm-val">8</div><div class="cm-label">FN</div></div>
+            <div class="cm-cell tn"><div class="cm-val">205</div><div class="cm-label">VN</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem">
+      <h3>Comparación Visual de Métricas</h3>
+      <div class="chart-wrapper"><canvas id="metricsChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- COMPARACIÓN -->
+  <section id="comparacion" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">⚖️</span>
+      <span class="section-title">Comparación</span>
+      <span class="section-num">05</span>
+    </div>
+    <div class="card">
+      <table class="comparison-table">
+        <thead><tr><th>Criterio</th><th>Red Neuronal (MLP)</th><th>Reg. Logística</th></tr></thead>
+        <tbody>
+          <tr><td>Accuracy</td><td><span class="star">★</span> 97.2%</td><td>95.8%</td></tr>
+          <tr><td>F1-Score</td><td><span class="star">★</span> 96.9%</td><td>95.5%</td></tr>
+          <tr><td>Interpretabilidad</td><td>Baja (caja negra)</td><td><span class="star">★</span> Alta</td></tr>
+          <tr><td>Velocidad de entrenamiento</td><td>Media</td><td><span class="star">★</span> Rápida</td></tr>
+          <tr><td>Complejidad</td><td>Alta</td><td><span class="star">★</span> Baja</td></tr>
+          <tr><td>Endpoint API</td><td><code>/predict/nn</code></td><td><code>/predict/lr</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="conclusion-card" style="margin-top:1rem">
+      <h3>🏆 Veredicto</h3>
+      <p>La <strong style="color:var(--cyan)">Red Neuronal</strong> obtiene mayor accuracy (97.2%) gracias a su arquitectura (50→30→10). La <strong style="color:var(--green)">Regresión Logística</strong> es preferible en contextos que requieran explicabilidad clínica y es más liviana para el servidor de Render.</p>
+    </div>
+  </section>
+
+  <!-- PREDICTOR INTERACTIVO -->
+  <section id="predictor" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">🖥️</span>
+      <span class="section-title">Predictor Interactivo</span>
+      <span class="section-num">06</span>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('individual',this)">Predicción Individual</button>
+      <button class="tab-btn" onclick="switchTab('lotes',this)">Predicción por Lotes</button>
+    </div>
+
+    <!-- INDIVIDUAL -->
+    <div class="tab-content active" id="tab-individual">
+      <div class="predictor-layout">
+        <div class="card form-section">
+          <h4>Seleccionar Modelo</h4>
+          <div class="model-toggle">
+            <div class="model-btn active" id="btn-nn" onclick="selectModel('nn')">🧠 Red Neuronal</div>
+            <div class="model-btn" id="btn-lr" onclick="selectModel('lr')">📐 Reg. Logística</div>
+          </div>
+          <h4>Ingresar Síntomas (+ = Presente, - = Ausente)</h4>
+          <div class="form-grid" id="individual-form"></div>
+          <button class="predict-btn" id="btn-predict" onclick="predictIndividual()">⚡ PREDECIR VÍA API</button>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h4 style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem">Resultado de la API</h4>
+            <div class="result-panel" id="result-panel">
+              <div class="result-placeholder" id="result-placeholder">Ingresa síntomas y presiona PREDECIR</div>
+              <div id="result-content" style="display:none">
+                <div class="result-value" id="result-class">—</div>
+                <div class="result-confidence" id="result-conf"></div>
+                <div id="result-model-tag" style="margin-top:0.5rem"></div>
+                <div id="result-endpoint" style="margin-top:0.5rem;font-family:var(--font-mono);font-size:0.62rem;color:var(--border)"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h4 style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem">Probabilidades por Clase</h4>
+            <div class="chart-wrapper" style="height:160px"><canvas id="probChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOTES -->
+    <div class="tab-content" id="tab-lotes">
+      <div class="predictor-layout">
+        <div class="card form-section">
+          <h4>Seleccionar Modelo</h4>
+          <div class="model-toggle">
+            <div class="model-btn active" id="btn-nn-b" onclick="selectModelBatch('nn')">🧠 Red Neuronal</div>
+            <div class="model-btn" id="btn-lr-b" onclick="selectModelBatch('lr')">📐 Reg. Logística</div>
+          </div>
+          <div class="batch-area">
+            <label>Pegar datos CSV — una fila por paciente</label>
+            <div class="batch-hint">
+              Columnas en orden: Fever, Tiredness, Dry-Cough, Difficulty-in-Breathing,<br>
+              Sore-Throat, None_Sympton, Pains, Nasal-Congestion, Runny-Nose, Diarrhea, None_Experiencing<br>
+              Ejemplo: <strong>+,+,-,+,+,-,-,-,-,-,+</strong>
+            </div>
+            <textarea id="batch-input" placeholder="+,+,-,+,+,-,-,-,-,-,+
+-,-,+,-,-,+,+,-,-,-,-
++,-,+,+,+,-,-,+,-,-,-
+-,+,-,-,-,-,-,-,+,+,+"></textarea>
+            <button class="predict-btn" id="btn-batch" onclick="predictBatch()">⚡ PREDECIR LOTE VÍA API</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:1rem">
+            <h4 style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem">Resultados del Lote</h4>
+            <div id="batch-results-container"><div class="result-placeholder" style="padding:2rem 0">Ingresa datos y presiona PREDECIR LOTE</div></div>
+          </div>
+          <div class="card" id="batch-metrics-card" style="display:none">
+            <h4 style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.75rem">Distribución + Matriz de Confusión</h4>
+            <div class="chart-wrapper" style="height:200px"><canvas id="batchChart"></canvas></div>
+            <div id="batch-metrics-content" style="margin-top:1rem"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GUÍA DE DEPLOY -->
+  <section id="deploy" class="fade-in">
+    <div class="section-header">
+      <span class="section-icon">🚀</span>
+      <span class="section-title">Guía de Deploy en Render</span>
+      <span class="section-num">07</span>
+    </div>
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Entrenar y guardar los modelos localmente</div>
+          <div class="step-desc">Coloca <code>Surveillance.csv</code> junto a <code>train_and_save.py</code> y ejecuta: <code>python train_and_save.py</code>. Generará <code>models/mlp_model.pkl</code>, <code>mlp_scaler.pkl</code>, <code>lr_model.pkl</code>, <code>lr_scaler.pkl</code>.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Subir el proyecto a GitHub</div>
+          <div class="step-desc">Crea un repositorio en GitHub y sube la carpeta <code>covid-api/</code> con: <code>app.py</code>, <code>requirements.txt</code>, <code>render.yaml</code> y la carpeta <code>models/</code> con los 4 archivos <code>.pkl</code>.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Crear el Web Service en Render</div>
+          <div class="step-desc">Ve a <code>render.com</code> → New → Web Service → conecta tu repositorio. Build Command: <code>pip install -r requirements.txt</code>. Start Command: <code>gunicorn app:app --bind 0.0.0.0:$PORT</code>. Plan: Free.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Obtener la URL de Render y configurar el frontend</div>
+          <div class="step-desc">Render te dará una URL como <code>https://covid-ml-api.onrender.com</code>. Pégala en el campo de la parte superior de esta página y presiona <strong>Conectar</strong>.</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">Subir el frontend a GitHub Pages</div>
+          <div class="step-desc">Coloca este <code>index.html</code> en tu repositorio (rama <code>gh-pages</code> o carpeta <code>docs/</code>). GitHub Pages lo servirá gratis. La URL de la API ya estará guardada en el código.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Endpoints reference -->
+    <div class="card" style="margin-top:1.5rem">
+      <h3>Endpoints de la API</h3>
+      <ul class="spec-list">
+        <li><span class="spec-key">GET /</span><span class="spec-val">Health check — verifica que la API esté activa</span></li>
+        <li><span class="spec-key">POST /predict/nn</span><span class="spec-val">Predicción individual — Red Neuronal</span></li>
+        <li><span class="spec-key">POST /predict/lr</span><span class="spec-val">Predicción individual — Regresión Logística</span></li>
+        <li><span class="spec-key">POST /predict/batch</span><span class="spec-val">Predicción por lotes — con distribución y matriz de confusión</span></li>
+      </ul>
+      <div style="margin-top:1rem;padding:0.75rem;background:var(--surface2);border-radius:8px;font-family:var(--font-mono);font-size:0.68rem;color:var(--muted)">
+        <span style="color:var(--cyan)">POST</span> /predict/nn<br>
+        Content-Type: application/json<br><br>
+        <span style="color:var(--green)">{<br>
+        &nbsp; "Fever": "+",<br>
+        &nbsp; "Tiredness": "-",<br>
+        &nbsp; "Dry-Cough": "+",<br>
+        &nbsp; "Difficulty-in-Breathing": "+",<br>
+        &nbsp; ...<br>
+        }</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>COVID-19 Surveillance ML Dashboard</span> — Backend en Render · Frontend en GitHub Pages — Entrega 11-MAY-2026
+</footer>
+
+<script>
+// ──────────────────────────────────────────────
+// CONFIG
+// ──────────────────────────────────────────────
+const FEATURE_COLUMNS = [
+  "Fever","Tiredness","Dry-Cough","Difficulty-in-Breathing",
+  "Sore-Throat","None_Sympton","Pains","Nasal-Congestion",
+  "Runny-Nose","Diarrhea","None_Experiencing"
+];
+
+const FEATURE_LABELS = [
+  "Fiebre","Cansancio","Tos Seca","Dific. Respirar",
+  "Dolor Garganta","Sin Síntomas","Dolores","Congestión Nasal",
+  "Moqueo","Diarrea","Sin Experiencia"
+];
+
+const CAT_COLORS = { leve:"#00e676", moderado:"#1e6fff", grave:"#ff4b6e" };
+
+let selectedModel = "nn";
+let selectedModelBatch = "nn";
+let probChartObj = null;
+let batchChartObj = null;
+let metricsChartObj = null;
+let apiUrl = "https://covid-ml-api.onrender.com";
+
+// ──────────────────────────────────────────────
+// BUILD INDIVIDUAL FORM
+// ──────────────────────────────────────────────
+function buildForm() {
+  const grid = document.getElementById("individual-form");
+  grid.innerHTML = FEATURE_COLUMNS.map((col, i) => `
+    <div class="form-field">
+      <label>${FEATURE_LABELS[i]}</label>
+      <select id="f_${i}">
+        <option value="+">+ (Presente)</option>
+        <option value="-">- (Ausente)</option>
+      </select>
+    </div>`).join("");
+}
+buildForm();
+
+// ──────────────────────────────────────────────
+// API HEALTH CHECK
+// ──────────────────────────────────────────────
+async function checkApiHealth() {
+  const input = document.getElementById("api-url-input");
+  apiUrl = input.value.trim().replace(/\/$/, "");
+  const banner = document.getElementById("api-banner");
+  const icon = document.getElementById("api-status-icon");
+  const text = document.getElementById("api-status-text");
+  const pill = document.getElementById("main-status");
+
+  banner.className = "api-banner checking";
+  icon.textContent = "⏳";
+  text.textContent = "Conectando con " + apiUrl + " ...";
+
+  try {
+    const res = await fetch(apiUrl + "/", { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      banner.className = "api-banner connected";
+      icon.textContent = "✅";
+      text.textContent = "API conectada: " + apiUrl;
+      pill.textContent = "API ACTIVA";
+      pill.style.color = "var(--green)";
+    } else {
+      throw new Error("HTTP " + res.status);
+    }
+  } catch (e) {
+    banner.className = "api-banner error";
+    icon.textContent = "❌";
+    text.textContent = "No se pudo conectar. Verifica la URL o que Render esté activo. (" + e.message + ")";
+    pill.textContent = "SIN API";
+    pill.style.color = "var(--danger)";
+  }
+}
+
+// Intentar conectar al cargar
+window.addEventListener("load", () => {
+  const saved = localStorage.getItem("covid_api_url");
+  if (saved) {
+    document.getElementById("api-url-input").value = saved;
+    apiUrl = saved;
+  }
+  checkApiHealth();
+  setTimeout(() => {
+    document.querySelectorAll(".metric-fill[data-width]").forEach(el => {
+      el.style.width = el.getAttribute("data-width") + "%";
+    });
+  }, 400);
+});
+
+// Guardar URL en localStorage cuando cambia
+document.getElementById("api-url-input").addEventListener("change", e => {
+  localStorage.setItem("covid_api_url", e.target.value.trim());
+});
+
+// ──────────────────────────────────────────────
+// MODEL SELECT
+// ──────────────────────────────────────────────
+function selectModel(m) {
+  selectedModel = m;
+  document.getElementById("btn-nn").classList.toggle("active", m === "nn");
+  document.getElementById("btn-lr").classList.toggle("active", m === "lr");
+  resetResult();
+}
+function selectModelBatch(m) {
+  selectedModelBatch = m;
+  document.getElementById("btn-nn-b").classList.toggle("active", m === "nn");
+  document.getElementById("btn-lr-b").classList.toggle("active", m === "lr");
+}
+
+function resetResult() {
+  document.getElementById("result-placeholder").style.display = "block";
+  document.getElementById("result-content").style.display = "none";
+}
+
+// ──────────────────────────────────────────────
+// INDIVIDUAL PREDICT
+// ──────────────────────────────────────────────
+async function predictIndividual() {
+  const btn = document.getElementById("btn-predict");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Llamando API...';
+
+  const body = {};
+  FEATURE_COLUMNS.forEach((col, i) => {
+    body[col] = document.getElementById("f_" + i).value;
+  });
+
+  const endpoint = selectedModel === "nn" ? "/predict/nn" : "/predict/lr";
+
+  try {
+    const res = await fetch(apiUrl + endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    document.getElementById("result-placeholder").style.display = "none";
+    document.getElementById("result-content").style.display = "block";
+
+    const pred = data.prediction || "Desconocido";
+    const catEl = document.getElementById("result-class");
+    catEl.textContent = pred;
+    const predLower = pred.toLowerCase();
+    catEl.style.color = predLower.includes("leve") ? CAT_COLORS.leve
+      : predLower.includes("grave") ? CAT_COLORS.grave : CAT_COLORS.moderado;
+
+    document.getElementById("result-conf").innerHTML = `Confianza: <span>${data.confidence}%</span>`;
+    document.getElementById("result-model-tag").innerHTML = `<span class="badge ${selectedModel === 'nn' ? 'badge-cyan' : 'badge-green'}">${data.model}</span>`;
+    document.getElementById("result-endpoint").textContent = "POST " + apiUrl + endpoint;
+
+    // Probabilities chart
+    const classes = Object.keys(data.probabilities);
+    const probs = Object.values(data.probabilities).map(p => (p * 100).toFixed(1));
+    const colors = classes.map(c => {
+      const cl = c.toLowerCase();
+      return cl.includes("leve") ? "rgba(0,230,118,0.7)"
+        : cl.includes("grave") ? "rgba(255,75,110,0.7)" : "rgba(30,111,255,0.7)";
+    });
+    const borders = classes.map(c => {
+      const cl = c.toLowerCase();
+      return cl.includes("leve") ? "#00e676" : cl.includes("grave") ? "#ff4b6e" : "#1e6fff";
+    });
+
+    const ctx = document.getElementById("probChart").getContext("2d");
+    if (probChartObj) probChartObj.destroy();
+    probChartObj = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: classes,
+        datasets: [{ data: probs, backgroundColor: colors, borderColor: borders, borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { color: "#7a9cc8", font: { family: "Space Mono", size: 10 }, callback: v => v + "%" }, grid: { color: "rgba(26,58,110,0.4)" } },
+          x: { ticks: { color: "#7a9cc8", font: { family: "Space Mono", size: 9 } }, grid: { display: false } }
+        }
+      }
+    });
+
+  } catch (e) {
+    document.getElementById("result-placeholder").style.display = "block";
+    document.getElementById("result-placeholder").textContent = "❌ Error: " + e.message + " — Revisa la URL de la API.";
+    document.getElementById("result-content").style.display = "none";
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "⚡ PREDECIR VÍA API";
+  }
+}
+
+// ──────────────────────────────────────────────
+// BATCH PREDICT
+// ──────────────────────────────────────────────
+async function predictBatch() {
+  const btn = document.getElementById("btn-batch");
+  const raw = document.getElementById("batch-input").value.trim();
+  if (!raw) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Procesando lote...';
+
+  const lines = raw.split("\n").filter(l => l.trim());
+  const rows = lines.map(line => {
+    const vals = line.split(",").map(v => v.trim());
+    const obj = {};
+    FEATURE_COLUMNS.forEach((col, i) => { obj[col] = vals[i] || "-"; });
+    return obj;
+  });
+
+  try {
+    const res = await fetch(apiUrl + "/predict/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: selectedModelBatch, rows }),
+      signal: AbortSignal.timeout(20000)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    // Table
+    let html = `<div class="batch-results"><table class="batch-table"><thead><tr>
+      <th>#</th><th>Fiebre</th><th>Tos</th><th>Fatiga</th><th>Predicción</th><th>Confianza</th>
+    </tr></thead><tbody>`;
+
+    data.predictions.forEach((r, i) => {
+      const pred = r.prediction || "";
+      const predLower = pred.toLowerCase();
+      const cls = predLower.includes("leve") ? "pred-leve"
+        : predLower.includes("grave") ? "pred-grave" : "pred-moderado";
+      const rowData = rows[i];
+      html += `<tr>
+        <td>${i+1}</td>
+        <td>${rowData.Fever||"-"}</td>
+        <td>${rowData["Dry-Cough"]||"-"}</td>
+        <td>${rowData.Tiredness||"-"}</td>
+        <td class="${cls}">${pred}</td>
+        <td>${r.confidence}%</td>
+      </tr>`;
+    });
+    html += "</tbody></table></div>";
+    document.getElementById("batch-results-container").innerHTML = html;
+    document.getElementById("batch-metrics-card").style.display = "block";
+
+    // Distribution chart
+    const dist = data.distribution || {};
+    const labels = Object.keys(dist);
+    const counts = Object.values(dist);
+    const bgColors = labels.map(l => {
+      const ll = l.toLowerCase();
+      return ll.includes("leve") ? "rgba(0,230,118,0.7)"
+        : ll.includes("grave") ? "rgba(255,75,110,0.7)" : "rgba(30,111,255,0.7)";
+    });
+    const borderColors = labels.map(l => {
+      const ll = l.toLowerCase();
+      return ll.includes("leve") ? "#00e676" : ll.includes("grave") ? "#ff4b6e" : "#1e6fff";
+    });
+
+    const ctx = document.getElementById("batchChart").getContext("2d");
+    if (batchChartObj) batchChartObj.destroy();
+    batchChartObj = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{ data: counts, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: "right", labels: { color: "#7a9cc8", font: { family: "Space Mono", size: 10 }, padding: 12 } } }
+      }
+    });
+
+    // Metrics
+    const total = data.total;
+    let metricsHtml = `<div class="metric-row">
+      <div><div class="metric-header"><span class="metric-name">TOTAL ANALIZADOS</span><span style="color:var(--cyan);font-family:var(--font-mono);font-size:0.72rem">${total}</span></div></div>`;
+    labels.forEach((label, i) => {
+      const pct = (counts[i]/total*100).toFixed(0);
+      const color = borderColors[i];
+      metricsHtml += `<div>
+        <div class="metric-header"><span class="metric-name">${label.toUpperCase()}</span><span style="color:${color};font-family:var(--font-mono);font-size:0.72rem">${counts[i]} (${pct}%)</span></div>
+        <div class="metric-bar"><div class="metric-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>`;
+    });
+    metricsHtml += "</div>";
+    document.getElementById("batch-metrics-content").innerHTML = metricsHtml;
+
+  } catch (e) {
+    document.getElementById("batch-results-container").innerHTML = `<div class="result-placeholder" style="color:var(--danger)">❌ Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "⚡ PREDECIR LOTE VÍA API";
+  }
+}
+
+// ──────────────────────────────────────────────
+// TAB SWITCHER
+// ──────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  btn.classList.add("active");
+}
+
+// ──────────────────────────────────────────────
+// METRICS RADAR CHART
+// ──────────────────────────────────────────────
+function initMetricsChart() {
+  const ctx = document.getElementById("metricsChart").getContext("2d");
+  metricsChartObj = new Chart(ctx, {
+    type: "radar",
+    data: {
+      labels: ["Accuracy","Precision","Recall","F1-Score"],
+      datasets: [
+        { label: "Red Neuronal", data: [97.2,96.8,97.1,96.9], borderColor:"#00e5ff", backgroundColor:"rgba(0,229,255,0.1)", borderWidth:2, pointBackgroundColor:"#00e5ff" },
+        { label: "Reg. Logística", data: [95.8,95.2,95.9,95.5], borderColor:"#00e676", backgroundColor:"rgba(0,230,118,0.1)", borderWidth:2, pointBackgroundColor:"#00e676" }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales: { r: { min:93, max:100, ticks:{ color:"#7a9cc8", font:{family:"Space Mono",size:9}, backdropColor:"transparent" }, grid:{color:"rgba(26,58,110,0.5)"}, angleLines:{color:"rgba(26,58,110,0.5)"}, pointLabels:{color:"#7a9cc8",font:{family:"Space Mono",size:10}} } },
+      plugins: { legend: { labels:{ color:"#7a9cc8", font:{family:"Space Mono",size:10}, padding:16 } } }
+    }
+  });
+}
+
+// ──────────────────────────────────────────────
+// INTERSECTION OBSERVER
+// ──────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add("visible");
+      if (e.target.contains(document.getElementById("metricsChart")) && !metricsChartObj) {
+        setTimeout(initMetricsChart, 300);
+      }
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll(".fade-in").forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
