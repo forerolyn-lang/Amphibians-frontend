@@ -509,32 +509,54 @@ document.addEventListener('keydown', e => {
 });
 
 // ==============================
-//  MODELO SIMULADO
-//  (calibrado con patrones del dataset real Surveillance.csv)
-//  PUS: A01+, A02+, A04+, A05+ frecuentes
-//  PIM: A04+, A05+ pero no A01
-//  PWS: mayoría negativos, A07+
+//  API BACKEND (Render)
 // ==============================
-function encode(vals) { return vals.map(v => v === '+' ? 1 : 0); }
+const API_URL = 'https://covid-backend-rnul.onrender.com';
 
-function simulateModel(vals, modelType) {
-  const enc = encode(vals);
-  const scoresPUS =  enc[0]*3.0 + enc[1]*1.5 + enc[2]*0.5 + enc[3]*1.0 + enc[4]*1.5 + enc[5]*(-0.5) + enc[6]*(-1.0);
-  const scoresPIM =  enc[0]*(-1.5) + enc[1]*0.5 + enc[2]*(-0.5) + enc[3]*2.0 + enc[4]*2.0 + enc[5]*0.5 + enc[6]*(-0.5);
-  const scoresPWS =  enc[0]*(-3.0) + enc[1]*(-2.0) + enc[2]*(-1.0) + enc[3]*(-2.0) + enc[4]*(-2.0) + enc[5]*(-1.0) + enc[6]*1.5;
-  const noise = modelType === 'nn' ? 0.3 : 0.6;
-  const s = [
-    scoresPUS + (Math.random() - 0.5) * noise,
-    scoresPIM + (Math.random() - 0.5) * noise,
-    scoresPWS + (Math.random() - 0.5) * noise
-  ];
-  // Softmax
-  const maxS = Math.max(...s);
-  const exp  = s.map(v => Math.exp(v - maxS));
-  const sum  = exp.reduce((a, b) => a + b, 0);
-  const probs = exp.map(v => v / sum);
-  const cat = CATS[probs.indexOf(Math.max(...probs))];
-  return { cat, probs };
+async function callAPI(vals, modelType) {
+  // El backend recibe un dict {A01, A02, ..., A07}
+  const cols = ['A01','A02','A03','A04','A05','A06','A07'];
+  const payload = {};
+  cols.forEach((col, i) => { payload[col] = vals[i]; });
+
+  // Endpoints reales: /predict/nn  o  /predict/lr
+  const endpoint = modelType === 'nn' ? '/predict/nn' : '/predict/lr';
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
+  const data = await res.json();
+
+  // Respuesta: { prediction: 'PUS', probabilities: {PUS:0.9, PIM:0.05, PWS:0.05} }
+  const probsObj = data.probabilities;
+  const probs = ['PUS','PIM','PWS'].map(c => probsObj[c] ?? 0);
+  return { cat: data.prediction, probs };
+}
+
+// Predicción por lotes usando /predict/batch
+async function callBatchAPI(rows, modelType) {
+  const cols = ['A01','A02','A03','A04','A05','A06','A07'];
+  const payload = {
+    model: modelType,
+    rows: rows.map(vals => {
+      const obj = {};
+      cols.forEach((col, i) => { obj[col] = vals[i]; });
+      return obj;
+    })
+  };
+  const res = await fetch(`${API_URL}/predict/batch`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
+  const data = await res.json();
+  return data.predictions.map(p => ({
+    cat:   p.prediction,
+    probs: ['PUS','PIM','PWS'].map(c => p.probabilities[c] ?? 0)
+  }));
 }
 
 // ==============================
@@ -557,10 +579,30 @@ function selectModelBatch(m) {
 // ==============================
 //  PREDICCIÓN INDIVIDUAL
 // ==============================
-function predictIndividual() {
-  const ids = ['f_a01','f_a02','f_a03','f_a04','f_a05','f_a06','f_a07'];
+async function predictIndividual() {
+  const ids  = ['f_a01','f_a02','f_a03','f_a04','f_a05','f_a06','f_a07'];
   const vals = ids.map(id => document.getElementById(id).value);
-  const result = simulateModel(vals, selModel);
+
+  // Estado de carga
+  const btn = document.querySelector('#tab-individual .predict-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Consultando modelo...';
+  document.getElementById('ind-placeholder').style.display = 'block';
+  document.getElementById('ind-placeholder').textContent = 'Consultando backend...';
+  document.getElementById('ind-result').style.display = 'none';
+
+  let result;
+  try {
+    result = await callAPI(vals, selModel);
+  } catch (err) {
+    document.getElementById('ind-placeholder').textContent = '⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.';
+    btn.disabled = false;
+    btn.textContent = '⚡ PREDECIR';
+    console.error(err);
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = '⚡ PREDECIR';
 
   document.getElementById('ind-placeholder').style.display = 'none';
   document.getElementById('ind-result').style.display = 'block';
@@ -646,10 +688,27 @@ uz.addEventListener('drop', e => {
 // ==============================
 //  PREDICCIÓN POR LOTES + MATRIZ DE CONFUSIÓN
 // ==============================
-function predictBatch() {
+async function predictBatch() {
   if (!csvData || !csvData.rows.length) { alert('Primero carga un archivo CSV.'); return; }
 
-  const results = csvData.rows.map(r => ({ ...r, pred: simulateModel(r.vals, selModelBatch) }));
+  const btn = document.querySelector('#tab-lotes .predict-btn');
+  btn.disabled = true;
+  btn.textContent = `⏳ Procesando ${csvData.rows.length} registros...`;
+
+  let results;
+  try {
+    // Usar endpoint /predict/batch para eficiencia
+    const preds = await callBatchAPI(csvData.rows.map(r => r.vals), selModelBatch);
+    results = csvData.rows.map((r, i) => ({ ...r, pred: preds[i] }));
+  } catch (err) {
+    alert('⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.');
+    btn.disabled = false;
+    btn.textContent = '⚡ PROCESAR CSV';
+    console.error(err);
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = '⚡ PROCESAR CSV';
 
   // Tabla de resultados
   let html = `<div class="batch-results"><table class="batch-table"><thead><tr>
