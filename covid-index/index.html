@@ -375,13 +375,13 @@
           </div>
           <h4>Ingresar Variables (A01–A07)</h4>
           <div class="form-grid">
-            <div class="form-field"><label>A01</label><select id="f_a01"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>A02</label><select id="f_a02"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>A03</label><select id="f_a03"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>A04</label><select id="f_a04"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>A05</label><select id="f_a05"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>A06</label><select id="f_a06"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
-            <div class="form-field"><label>A07</label><select id="f_a07"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
+            <div class="form-field"><label>cansancio</label><select id="f_a01"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
+            <div class="form-field"><label>cogestion nasal</label><select id="f_a02"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
+            <div class="form-field"><label>deficit_repirar</label><select id="f_a03"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
+            <div class="form-field"><label>fiebre</label><select id="f_a04"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
+            <div class="form-field"><label>dolor de garganta</label><select id="f_a05"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
+            <div class="form-field"><label>marreo</label><select id="f_a06"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
+            <div class="form-field"><label>dolores</label><select id="f_a07"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
           </div>
           <button class="predict-btn" onclick="predictIndividual()">⚡ PREDECIR</button>
         </div>
@@ -511,7 +511,27 @@ document.addEventListener('keydown', e => {
 // ==============================
 //  API BACKEND (Render)
 // ==============================
-const API_URL = 'https://covid-backend-rnul.onrender.com';
+const API_URL = 'https://covid-backend-czt9.onrender.com';
+
+// Verificación de conectividad al cargar la página
+(async function checkAPI() {
+  const pill = document.querySelector('.status-pill');
+  try {
+    const res = await fetch(`${API_URL}/`, { signal: AbortSignal.timeout(8000) });
+    if (res.ok) {
+      if (pill) { pill.style.color = 'var(--green)'; pill.textContent = 'BACKEND ACTIVO'; }
+    } else {
+      throw new Error('Non-OK response');
+    }
+  } catch {
+    if (pill) {
+      pill.style.color = 'var(--danger)';
+      pill.style.borderColor = 'rgba(255,75,110,.25)';
+      pill.style.background = 'rgba(255,75,110,.08)';
+      pill.textContent = 'BACKEND INACTIVO';
+    }
+  }
+})();
 
 async function callAPI(vals, modelType) {
   // El backend recibe un dict {A01, A02, ..., A07}
