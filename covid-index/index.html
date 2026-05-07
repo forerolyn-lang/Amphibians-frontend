@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COVID-19 ML Dashboard — Vigilancia Epidemiológica</title>
+<title>Anfibios ML Dashboard — Predicción de Presencia</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -82,6 +82,7 @@
   .badge-blue{background:rgba(30,111,255,.2);color:var(--blue-light);border:1px solid rgba(30,111,255,.3);}
   .badge-green{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3);}
   .badge-cyan{background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.25);}
+  .badge-gold{background:rgba(255,213,79,.1);color:var(--gold);border:1px solid rgba(255,213,79,.25);}
   .card p{font-size:.9rem;color:var(--muted);line-height:1.7;}
   .spec-list{list-style:none;margin-top:.75rem;}
   .spec-list li{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid rgba(26,58,110,.5);font-size:.82rem;}
@@ -109,31 +110,30 @@
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
   .form-field{display:flex;flex-direction:column;gap:.3rem;}
   .form-field label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;}
-  .form-field select{background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:.45rem .6rem;border-radius:6px;font-family:var(--font-mono);font-size:.75rem;outline:none;cursor:pointer;transition:border-color .2s;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9cc8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center;padding-right:2rem;}
-  .form-field select:focus{border-color:var(--blue);}
+  .form-field select,.form-field input[type=number]{background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:.45rem .6rem;border-radius:6px;font-family:var(--font-mono);font-size:.75rem;outline:none;cursor:pointer;transition:border-color .2s;}
+  .form-field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9cc8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center;padding-right:2rem;}
+  .form-field input[type=number]::-webkit-inner-spin-button{opacity:.5;}
+  .form-field select:focus,.form-field input[type=number]:focus{border-color:var(--blue);}
   .model-toggle{display:flex;gap:.5rem;margin-bottom:1rem;}
-  .model-btn{flex:1;padding:.6rem;border:1px solid var(--border);background:var(--surface2);color:var(--muted);border-radius:8px;font-family:var(--font-mono);font-size:.65rem;cursor:pointer;transition:all .2s;text-align:center;letter-spacing:.05em;}
-  .model-btn.active{border-color:var(--blue);background:rgba(30,111,255,.15);color:var(--blue-light);box-shadow:var(--glow-blue);}
-  .predict-btn{width:100%;margin-top:1rem;padding:.85rem;background:linear-gradient(135deg,var(--blue),#1050cc);border:none;border-radius:8px;color:white;font-family:var(--font-mono);font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .3s;text-transform:uppercase;}
-  .predict-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,111,255,.4);}
-  .result-panel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-top:1rem;min-height:100px;display:flex;flex-direction:column;gap:.75rem;}
-  .result-value{font-family:var(--font-mono);font-size:1.6rem;font-weight:700;color:var(--green);text-shadow:var(--glow-green);transition:all .4s;}
-  .result-confidence{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);}
-  .result-confidence span{color:var(--blue-light);}
-  .result-placeholder{color:var(--border);font-family:var(--font-mono);font-size:.8rem;text-align:center;padding:1.5rem 0;}
-
-  /* ===== TABS ===== */
-  .tab-bar{display:flex;gap:.25rem;margin-bottom:1rem;background:var(--surface2);padding:.25rem;border-radius:8px;border:1px solid var(--border);width:fit-content;}
-  .tab-btn{padding:.4rem 1rem;border:none;background:transparent;color:var(--muted);font-family:var(--font-mono);font-size:.68rem;cursor:pointer;border-radius:6px;transition:all .2s;letter-spacing:.05em;text-transform:uppercase;}
-  .tab-btn.active{background:var(--blue);color:white;}
+  .model-btn{flex:1;padding:.5rem;text-align:center;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-mono);font-size:.68rem;color:var(--muted);transition:all .2s;user-select:none;}
+  .model-btn.active{background:rgba(30,111,255,.15);border-color:var(--blue);color:var(--blue-light);}
+  .tab-bar{display:flex;gap:.5rem;margin-bottom:1.5rem;}
+  .tab-btn{padding:.55rem 1.25rem;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;transition:all .2s;}
+  .tab-btn.active{background:rgba(30,111,255,.15);border-color:var(--blue);color:var(--blue-light);}
   .tab-content{display:none;}
   .tab-content.active{display:block;}
-
-  /* ===== UPLOAD ZONE ===== */
-  .upload-zone{border:2px dashed var(--border);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface2);position:relative;}
-  .upload-zone:hover,.upload-zone.drag{border-color:var(--cyan);background:rgba(0,229,255,.04);}
-  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-  .upload-icon{font-size:2rem;margin-bottom:.5rem;}
+  .result-panel{min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:.5rem;}
+  .result-placeholder{font-family:var(--font-mono);font-size:.72rem;color:var(--border);text-align:center;}
+  .result-value{font-family:var(--font-mono);font-size:2.2rem;font-weight:700;letter-spacing:.05em;}
+  .result-confidence{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin-top:.25rem;}
+  .result-confidence span{color:var(--cyan);}
+  .predict-btn{width:100%;margin-top:1rem;padding:.85rem;background:linear-gradient(135deg,var(--blue),#1050cc);border:none;border-radius:8px;color:white;font-family:var(--font-mono);font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .3s;text-transform:uppercase;}
+  .predict-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,111,255,.4);}
+  .predict-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .upload-zone{border:2px dashed var(--border);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;}
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(30,111,255,.04);}
+  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+  .upload-icon{font-size:1.8rem;margin-bottom:.5rem;}
   .upload-label{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);}
   .upload-sub{font-family:var(--font-mono);font-size:.62rem;color:var(--border);margin-top:.25rem;}
   .upload-ok{font-family:var(--font-mono);font-size:.72rem;color:var(--green);margin-top:.5rem;display:none;}
@@ -150,13 +150,12 @@
   .cm-label-cell{font-family:var(--font-mono);font-size:.65rem;color:var(--cyan);text-align:right;padding:.5rem .75rem .5rem 0;white-space:nowrap;}
 
   /* ===== BATCH TABLE ===== */
-  .batch-results{overflow-x:auto;margin-top:.75rem;}
+  .batch-results{overflow-x:auto;margin-top:.75rem;max-height:320px;overflow-y:auto;}
   .batch-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.72rem;}
-  .batch-table th{padding:.5rem .75rem;color:var(--cyan);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;}
+  .batch-table th{padding:.5rem .75rem;color:var(--cyan);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;background:var(--surface);}
   .batch-table td{padding:.5rem .75rem;border-bottom:1px solid rgba(26,58,110,.3);color:var(--muted);}
-  .pred-pus{color:var(--cyan);font-weight:700;}
-  .pred-pim{color:var(--green);font-weight:700;}
-  .pred-pws{color:var(--gold);font-weight:700;}
+  .pred-presente{color:var(--green);font-weight:700;}
+  .pred-ausente{color:var(--gold);font-weight:700;}
   .pred-wrong{color:var(--danger)!important;}
 
   /* ===== METRICS BADGES ===== */
@@ -173,6 +172,7 @@
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
   .fade-in{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
   .fade-in.visible{opacity:1;transform:translateY(0);}
+  .form-section-scroll{max-height:420px;overflow-y:auto;padding-right:.25rem;}
 
   @media(max-width:760px){
     .results-grid,.predictor-layout,.intro-grid{grid-template-columns:1fr;}
@@ -194,9 +194,9 @@
     <div class="login-glow"></div>
     <div class="login-box">
       <div class="l-logo">
-        <div class="l-mark">🦠</div>
-        <div class="l-title">COVID/ML</div>
-        <div class="l-sub">Vigilancia Epidemiológica</div>
+        <div class="l-mark">🐸</div>
+        <div class="l-title">ANFIBIOS/ML</div>
+        <div class="l-sub">Predicción de Presencia de Especies</div>
       </div>
       <div class="l-field">
         <label>Usuario</label>
@@ -217,14 +217,14 @@
 <div id="app">
 <header>
   <div class="header-inner">
-    <div class="logo">COVID<span>/</span>ML <span>—</span> Vigilancia</div>
+    <div class="logo">ANFIBIOS<span>/</span>ML <span>—</span> Predictor</div>
     <nav>
       <a href="#intro">Intro</a>
       <a href="#resultados">Resultados</a>
       <a href="#predictor">Predictor</a>
     </nav>
     <div class="hdr">
-      <div class="status-pill">SISTEMA ACTIVO</div>
+      <div class="status-pill" id="status-pill">VERIFICANDO...</div>
       <button class="logout-btn" onclick="doLogout()">↩ Salir</button>
     </div>
   </div>
@@ -236,19 +236,19 @@
   <div class="hero fade-in">
     <div class="hero-tag">Proyecto Final · Individual · Entrega 11-MAY-2026</div>
     <h1>
-      Clasificación<br>
-      <span class="a1">Epidemiológica</span><br>
-      <span class="a2">COVID-19</span>
+      Predicción de<br>
+      <span class="a1">Presencia de</span><br>
+      <span class="a2">Tree Frog 🐸</span>
     </h1>
     <p class="hero-desc">
-      Sistema de Machine Learning para vigilancia epidemiológica basado en datos del repositorio UCI.
-      Dos modelos entrenados, una interfaz interactiva de predicción.
+      Sistema de Machine Learning para predecir la presencia de <em>rana arborícola</em> en zonas
+      cercanas a carreteras, basado en variables ecológicas del repositorio UCI.
     </p>
     <div class="hero-stats">
       <div class="stat-item"><div class="stat-val">2</div><div class="stat-label">MODELOS ML</div></div>
-      <div class="stat-item"><div class="stat-val">97.2%</div><div class="stat-label">ACC RED NEURONAL</div></div>
-      <div class="stat-item"><div class="stat-val">95.8%</div><div class="stat-label">ACC REG. LOGÍSTICA</div></div>
-      <div class="stat-item"><div class="stat-val">3</div><div class="stat-label">CATEGORÍAS (PUS/PIM/PWS)</div></div>
+      <div class="stat-item"><div class="stat-val">94.2%</div><div class="stat-label">ACC RED NEURONAL</div></div>
+      <div class="stat-item"><div class="stat-val">77.8%</div><div class="stat-label">ACC REG. LOGÍSTICA</div></div>
+      <div class="stat-item"><div class="stat-val">189</div><div class="stat-label">REGISTROS UCI</div></div>
     </div>
   </div>
 
@@ -263,30 +263,28 @@
       <div class="card">
         <h3><span class="badge badge-blue">PROBLEMA</span></h3>
         <p>
-          La vigilancia epidemiológica del COVID-19 requiere clasificar casos de forma eficiente.
-          El dataset <strong style="color:var(--white)">Surveillance.csv</strong> contiene 7 variables
-          categóricas (A01–A07) con signos y síntomas que permiten predecir la categoría clínica:
-          <strong style="color:var(--cyan)">PUS</strong>,
-          <strong style="color:var(--green)">PIM</strong> o
-          <strong style="color:var(--gold)">PWS</strong>.
+          El dataset <strong style="color:var(--white)">Amphibians (UCI)</strong> recoge mediciones
+          ecológicas y de infraestructura vial en Polonia para determinar la presencia de anfibios
+          en zonas de riesgo. El objetivo es predecir si la
+          <strong style="color:var(--green)">rana arborícola (Tree frog)</strong> está presente (1) o ausente (0).
         </p>
         <p style="margin-top:.75rem">
-          Este proyecto entrena y compara una <strong style="color:var(--cyan)">Red Neuronal (MLP)</strong>
-          y <strong style="color:var(--green)">Regresión Logística</strong>, con predictor interactivo
-          que acepta el dataset real para calcular la matriz de confusión.
+          Se entrenaron una <strong style="color:var(--cyan)">Red Neuronal (MLP)</strong>
+          y una <strong style="color:var(--green)">Regresión Logística</strong> con 22 variables
+          de entrada, escalado con <code>StandardScaler</code> y encoding one-hot de la carretera.
         </p>
       </div>
       <div class="card">
         <h3><span class="badge badge-cyan">ESPECIFICACIONES</span></h3>
         <ul class="spec-list">
-          <li><span class="spec-key">Dataset</span><span class="spec-val">Surveillance.csv</span></li>
-          <li><span class="spec-key">Variables</span><span class="spec-val">A01 – A07 (+/-)</span></li>
-          <li><span class="spec-key">Target</span><span class="spec-val">Categories (PUS/PIM/PWS)</span></li>
-          <li><span class="spec-key">Tarea</span><span class="spec-val">Clasificación multiclase</span></li>
+          <li><span class="spec-key">Dataset</span><span class="spec-val">Amphibians — UCI</span></li>
+          <li><span class="spec-key">Registros</span><span class="spec-val">189</span></li>
+          <li><span class="spec-key">Variables entrada</span><span class="spec-val">22 (+ 1 one-hot)</span></li>
+          <li><span class="spec-key">Target</span><span class="spec-val">Tree frog (0 / 1)</span></li>
+          <li><span class="spec-key">Tarea</span><span class="spec-val">Clasificación binaria</span></li>
           <li><span class="spec-key">Modelo A</span><span class="spec-val">MLPClassifier</span></li>
           <li><span class="spec-key">Modelo B</span><span class="spec-val">LogisticRegression</span></li>
           <li><span class="spec-key">Escalado</span><span class="spec-val">StandardScaler</span></li>
-          <li><span class="spec-key">Deploy</span><span class="spec-val">GitHub Pages</span></li>
         </ul>
       </div>
     </div>
@@ -300,47 +298,45 @@
       <span class="sec-num">02</span>
     </div>
     <div class="results-grid">
-      <!-- Red Neuronal -->
       <div class="card">
-        <h3><span class="badge badge-cyan">RED NEURONAL</span></h3>
+        <h3><span class="badge badge-cyan">RED NEURONAL (MLP)</span></h3>
         <div class="metric-row">
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--cyan)">97.2%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="97.2"></div></div>
+            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--cyan)">94.2%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="94.2"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--cyan)">96.8%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="96.8"></div></div>
+            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--cyan)">94.1%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="94.1"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--cyan)">97.1%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="97.1"></div></div>
+            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--cyan)">90.1%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="90.1"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--cyan)">96.9%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="96.9"></div></div>
+            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--cyan)">92.1%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="92.1"></div></div>
           </div>
         </div>
       </div>
-      <!-- Regresión Logística -->
       <div class="card">
         <h3><span class="badge badge-green">REG. LOGÍSTICA</span></h3>
         <div class="metric-row">
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--green)">95.8%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="95.8"></div></div>
+            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--green)">77.8%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-green" data-width="77.8"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--green)">95.2%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="95.2"></div></div>
+            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--green)">73.0%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-green" data-width="73.0"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--green)">95.9%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="95.9"></div></div>
+            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--green)">64.8%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-green" data-width="64.8"></div></div>
           </div>
           <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--green)">95.5%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="95.5"></div></div>
+            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--green)">68.7%</span></div>
+            <div class="metric-bar"><div class="metric-fill fill-green" data-width="68.7"></div></div>
           </div>
         </div>
       </div>
@@ -373,32 +369,50 @@
             <div class="model-btn active" id="btn-nn" onclick="selectModel('nn')">🧠 Red Neuronal</div>
             <div class="model-btn" id="btn-lr" onclick="selectModel('lr')">📐 Reg. Logística</div>
           </div>
-          <h4>Ingresar Variables (A01–A07)</h4>
+          <h4>Variables de Entrada</h4>
+          <div class="form-section-scroll">
           <div class="form-grid">
-            <div class="form-field"><label>cansancio</label><select id="f_a01"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>cogestion nasal</label><select id="f_a02"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>deficit_repirar</label><select id="f_a03"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>fiebre</label><select id="f_a04"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>dolor de garganta</label><select id="f_a05"><option value="+">+ Positivo</option><option value="-">- Negativo</option></select></div>
-            <div class="form-field"><label>marreo</label><select id="f_a06"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
-            <div class="form-field"><label>dolores</label><select id="f_a07"><option value="-">- Negativo</option><option value="+">+ Positivo</option></select></div>
+            <div class="form-field"><label>Carretera (Motorway)</label><select id="f_motorway"><option value="A1">A1</option><option value="S52">S52</option></select></div>
+            <div class="form-field"><label>ID Muestra</label><input type="number" id="f_id" value="1" min="1"></div>
+            <div class="form-field"><label>SR – Dist. carretera (m)</label><input type="number" id="f_sr" value="500" step="100"></div>
+            <div class="form-field"><label>NR – Nº carreteras</label><input type="number" id="f_nr" value="1" min="0"></div>
+            <div class="form-field"><label>TR – Tráfico (veh/día)</label><input type="number" id="f_tr" value="5" min="0"></div>
+            <div class="form-field"><label>VR – Velocidad (km/h)</label><input type="number" id="f_vr" value="2" min="0"></div>
+            <div class="form-field"><label>SUR1 – Suelo tipo 1</label><input type="number" id="f_sur1" value="6" min="0"></div>
+            <div class="form-field"><label>SUR2 – Suelo tipo 2</label><input type="number" id="f_sur2" value="2" min="0"></div>
+            <div class="form-field"><label>SUR3 – Suelo tipo 3</label><input type="number" id="f_sur3" value="10" min="0"></div>
+            <div class="form-field"><label>UR – Uso urbano</label><input type="number" id="f_ur" value="0" min="0"></div>
+            <div class="form-field"><label>FR – Uso forestal</label><input type="number" id="f_fr" value="0" min="0"></div>
+            <div class="form-field"><label>OR – Org. materia (%)</label><input type="number" id="f_or" value="50" min="0" max="100"></div>
+            <div class="form-field"><label>RR – Pendiente (%)</label><input type="number" id="f_rr" value="0" min="0"></div>
+            <div class="form-field"><label>BR – Dist. cuerpo agua</label><input type="number" id="f_br" value="0" min="0"></div>
+            <div class="form-field"><label>MR – Microhábitat</label><input type="number" id="f_mr" value="0" min="0"></div>
+            <div class="form-field"><label>CR – Clase carretera</label><input type="number" id="f_cr" value="1" min="1" max="2"></div>
+            <div class="form-field"><label>Ranas verdes</label><select id="f_gf"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+            <div class="form-field"><label>Ranas pardas</label><select id="f_bf"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+            <div class="form-field"><label>Sapo común</label><select id="f_ct"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+            <div class="form-field"><label>Sapo de fuego</label><select id="f_fbt"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+            <div class="form-field"><label>Tritón común</label><select id="f_cn"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+            <div class="form-field"><label>Tritón crestado</label><select id="f_gcn"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
+          </div>
           </div>
           <button class="predict-btn" onclick="predictIndividual()">⚡ PREDECIR</button>
         </div>
         <div>
           <div class="card" style="margin-bottom:1rem">
-            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Resultado</h4>
+            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Resultado — Tree Frog</h4>
             <div class="result-panel">
               <div class="result-placeholder" id="ind-placeholder">Ingresa variables y presiona PREDECIR</div>
               <div id="ind-result" style="display:none">
                 <div class="result-value" id="ind-class">—</div>
+                <div id="ind-label" style="font-family:var(--font-mono);font-size:.85rem;margin-top:.25rem;"></div>
                 <div class="result-confidence" id="ind-conf"></div>
                 <div id="ind-model-tag" style="margin-top:.5rem"></div>
               </div>
             </div>
           </div>
           <div class="card">
-            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Probabilidades por Clase</h4>
+            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Probabilidades (Ausente / Presente)</h4>
             <div class="chart-wrapper" style="height:160px"><canvas id="probChart"></canvas></div>
           </div>
         </div>
@@ -418,12 +432,13 @@
           <div class="upload-zone" id="upload-zone">
             <input type="file" accept=".csv" id="csv-file" onchange="handleCSV(this)">
             <div class="upload-icon">📂</div>
-            <div class="upload-label">Arrastra tu <strong>Surveillance.csv</strong> aquí</div>
+            <div class="upload-label">Arrastra tu <strong>dataset.csv</strong> aquí</div>
             <div class="upload-sub">o haz clic para seleccionar el archivo</div>
             <div class="upload-ok" id="upload-ok">✅ Archivo cargado correctamente</div>
           </div>
           <div style="margin-top:.75rem;padding:.6rem .75rem;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.15);border-radius:6px;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);">
-            Formato esperado: columnas A01,A02,A03,A04,A05,A06,A07,Categories con valores +/-
+            Formato: CSV con separador <strong>;</strong> — columnas del dataset original UCI (con encabezado en fila 2).<br>
+            Columna <strong>Tree frog</strong> opcional para calcular métricas.
           </div>
           <button class="predict-btn" onclick="predictBatch()">⚡ PREDECIR LOTE + MATRIZ</button>
         </div>
@@ -437,7 +452,6 @@
         </div>
       </div>
 
-      <!-- CONFUSION MATRIX + CHART -->
       <div id="cm-section" style="display:none;margin-top:1.5rem;">
         <div class="card">
           <h3>📊 Métricas del Lote</h3>
@@ -461,9 +475,9 @@
 </main>
 
 <footer>
-  <span>COVID-19 Surveillance ML Dashboard</span> — Proyecto Final Individual — Entrega 11-MAY-2026 — UCI Dataset
+  <span>Anfibios ML Dashboard</span> — Proyecto Final Individual — Entrega 11-MAY-2026 — UCI Amphibians Dataset
 </footer>
-</div><!-- fin #app -->
+</div>
 
 <script>
 // ==============================
@@ -473,9 +487,9 @@ let selModel = 'nn', selModelBatch = 'nn';
 let probChart = null, batchChart = null, metricsChart = null;
 let csvData = null;
 
-const CATS = ['PUS', 'PIM', 'PWS'];
-const CAT_COLORS = { PUS: '#00e5ff', PIM: '#00e676', PWS: '#ffd54f' };
-const CAT_CLASS  = { PUS: 'pred-pus', PIM: 'pred-pim', PWS: 'pred-pws' };
+const CATS   = ['0','1'];
+const LABELS = { '0': 'Ausente', '1': 'Presente' };
+const CAT_COLORS = { '0': '#ffd54f', '1': '#00e676' };
 
 // ==============================
 //  LOGIN / LOGOUT
@@ -491,6 +505,7 @@ function doLogin() {
     e.textContent = '';
     setTimeout(() => { animateBars(); initMetricsChart(); }, 400);
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    checkAPI();
   } else {
     e.textContent = 'Usuario o contraseña incorrectos.';
     document.getElementById('l-pass').value = '';
@@ -511,35 +526,63 @@ document.addEventListener('keydown', e => {
 // ==============================
 //  API BACKEND (Render)
 // ==============================
-const API_URL = 'https://covid-backend-czt9.onrender.com';
+const API_URL = 'https://covid-backend-rnul.onrender.com';
 
-// Verificación de conectividad al cargar la página
-(async function checkAPI() {
-  const pill = document.querySelector('.status-pill');
+async function checkAPI() {
+  const pill = document.getElementById('status-pill');
   try {
-    const res = await fetch(`${API_URL}/`, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(`${API_URL}/`, { signal: AbortSignal.timeout(10000) });
     if (res.ok) {
-      if (pill) { pill.style.color = 'var(--green)'; pill.textContent = 'BACKEND ACTIVO'; }
-    } else {
-      throw new Error('Non-OK response');
-    }
+      pill.style.color = 'var(--green)';
+      pill.style.borderColor = 'rgba(0,230,118,.25)';
+      pill.style.background  = 'rgba(0,230,118,.08)';
+      pill.textContent = 'BACKEND ACTIVO';
+    } else throw new Error();
   } catch {
-    if (pill) {
-      pill.style.color = 'var(--danger)';
-      pill.style.borderColor = 'rgba(255,75,110,.25)';
-      pill.style.background = 'rgba(255,75,110,.08)';
-      pill.textContent = 'BACKEND INACTIVO';
-    }
+    pill.style.color = 'var(--danger)';
+    pill.style.borderColor = 'rgba(255,75,110,.25)';
+    pill.style.background  = 'rgba(255,75,110,.08)';
+    pill.textContent = 'BACKEND INACTIVO';
   }
-})();
+}
 
-async function callAPI(vals, modelType) {
-  // El backend recibe un dict {A01, A02, ..., A07}
-  const cols = ['A01','A02','A03','A04','A05','A06','A07'];
-  const payload = {};
-  cols.forEach((col, i) => { payload[col] = vals[i]; });
+// Construye el payload a partir de los campos del formulario o un objeto row
+function buildPayload(source) {
+  // source puede ser 'form' (leer del DOM) o un objeto con los valores
+  const g = id => {
+    const el = document.getElementById(id);
+    return el ? el.value : '0';
+  };
+  if (source === 'form') {
+    return {
+      Motorway: g('f_motorway'),
+      ID:   parseFloat(g('f_id')),
+      SR:   parseFloat(g('f_sr')),
+      NR:   parseFloat(g('f_nr')),
+      TR:   parseFloat(g('f_tr')),
+      VR:   parseFloat(g('f_vr')),
+      SUR1: parseFloat(g('f_sur1')),
+      SUR2: parseFloat(g('f_sur2')),
+      SUR3: parseFloat(g('f_sur3')),
+      UR:   parseFloat(g('f_ur')),
+      FR:   parseFloat(g('f_fr')),
+      OR:   parseFloat(g('f_or')),
+      RR:   parseFloat(g('f_rr')),
+      BR:   parseFloat(g('f_br')),
+      MR:   parseFloat(g('f_mr')),
+      CR:   parseFloat(g('f_cr')),
+      'Green frogs':        parseFloat(g('f_gf')),
+      'Brown frogs':        parseFloat(g('f_bf')),
+      'Common toad':        parseFloat(g('f_ct')),
+      'Fire-bellied toad':  parseFloat(g('f_fbt')),
+      'Common newt':        parseFloat(g('f_cn')),
+      'Great crested newt': parseFloat(g('f_gcn'))
+    };
+  }
+  return source; // ya es un objeto row del CSV
+}
 
-  // Endpoints reales: /predict/nn  o  /predict/lr
+async function callAPI(payload, modelType) {
   const endpoint = modelType === 'nn' ? '/predict/nn' : '/predict/lr';
   const res = await fetch(`${API_URL}${endpoint}`, {
     method: 'POST',
@@ -548,34 +591,26 @@ async function callAPI(vals, modelType) {
   });
   if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
   const data = await res.json();
-
-  // Respuesta: { prediction: 'PUS', probabilities: {PUS:0.9, PIM:0.05, PWS:0.05} }
-  const probsObj = data.probabilities;
-  const probs = ['PUS','PIM','PWS'].map(c => probsObj[c] ?? 0);
-  return { cat: data.prediction, probs };
+  // { prediction: 0|1, label: 'Ausente'|'Presente', probabilities: {'0':p,'1':p}, confidence: N }
+  return {
+    cat:   String(data.prediction),
+    label: data.label,
+    probs: [data.probabilities['0'] ?? 0, data.probabilities['1'] ?? 0]
+  };
 }
 
-// Predicción por lotes usando /predict/batch
 async function callBatchAPI(rows, modelType) {
-  const cols = ['A01','A02','A03','A04','A05','A06','A07'];
-  const payload = {
-    model: modelType,
-    rows: rows.map(vals => {
-      const obj = {};
-      cols.forEach((col, i) => { obj[col] = vals[i]; });
-      return obj;
-    })
-  };
   const res = await fetch(`${API_URL}/predict/batch`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify({ model: modelType, rows })
   });
   if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
   const data = await res.json();
   return data.predictions.map(p => ({
-    cat:   p.prediction,
-    probs: ['PUS','PIM','PWS'].map(c => p.probabilities[c] ?? 0)
+    cat:   String(p.prediction),
+    label: p.label,
+    probs: [p.probabilities['0'] ?? 0, p.probabilities['1'] ?? 0]
   }));
 }
 
@@ -587,6 +622,7 @@ function selectModel(m) {
   document.getElementById('btn-nn').classList.toggle('active', m === 'nn');
   document.getElementById('btn-lr').classList.toggle('active', m === 'lr');
   document.getElementById('ind-placeholder').style.display = 'block';
+  document.getElementById('ind-placeholder').textContent = 'Ingresa variables y presiona PREDECIR';
   document.getElementById('ind-result').style.display = 'none';
 }
 
@@ -600,10 +636,7 @@ function selectModelBatch(m) {
 //  PREDICCIÓN INDIVIDUAL
 // ==============================
 async function predictIndividual() {
-  const ids  = ['f_a01','f_a02','f_a03','f_a04','f_a05','f_a06','f_a07'];
-  const vals = ids.map(id => document.getElementById(id).value);
-
-  // Estado de carga
+  const payload = buildPayload('form');
   const btn = document.querySelector('#tab-individual .predict-btn');
   btn.disabled = true;
   btn.textContent = '⏳ Consultando modelo...';
@@ -613,23 +646,23 @@ async function predictIndividual() {
 
   let result;
   try {
-    result = await callAPI(vals, selModel);
+    result = await callAPI(payload, selModel);
   } catch (err) {
     document.getElementById('ind-placeholder').textContent = '⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.';
-    btn.disabled = false;
-    btn.textContent = '⚡ PREDECIR';
-    console.error(err);
-    return;
+    btn.disabled = false; btn.textContent = '⚡ PREDECIR';
+    console.error(err); return;
   }
-  btn.disabled = false;
-  btn.textContent = '⚡ PREDECIR';
+  btn.disabled = false; btn.textContent = '⚡ PREDECIR';
 
   document.getElementById('ind-placeholder').style.display = 'none';
   document.getElementById('ind-result').style.display = 'block';
 
   const catEl = document.getElementById('ind-class');
   catEl.textContent = result.cat;
-  catEl.style.color = CAT_COLORS[result.cat];
+  catEl.style.color = CAT_COLORS[result.cat] || 'var(--white)';
+
+  document.getElementById('ind-label').textContent = result.label;
+  document.getElementById('ind-label').style.color = CAT_COLORS[result.cat] || 'var(--muted)';
 
   const conf = (Math.max(...result.probs) * 100).toFixed(1);
   document.getElementById('ind-conf').innerHTML = `Confianza: <span>${conf}%</span>`;
@@ -643,11 +676,11 @@ async function predictIndividual() {
   probChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: CATS,
+      labels: ['Ausente (0)', 'Presente (1)'],
       datasets: [{
         data: result.probs.map(p => (p * 100).toFixed(1)),
-        backgroundColor: ['rgba(0,229,255,.6)', 'rgba(0,230,118,.6)', 'rgba(255,213,79,.6)'],
-        borderColor:      ['#00e5ff', '#00e676', '#ffd54f'],
+        backgroundColor: ['rgba(255,213,79,.6)', 'rgba(0,230,118,.6)'],
+        borderColor:      ['#ffd54f', '#00e676'],
         borderWidth: 1, borderRadius: 4
       }]
     },
@@ -675,17 +708,29 @@ function handleCSV(input) {
   reader.onload = function(e) {
     const text  = e.target.result;
     const lines = text.split(/\r?\n/).filter(l => l.trim());
-    const header = lines[0].split(',').map(h => h.trim().toUpperCase());
-    const colsA  = ['A01','A02','A03','A04','A05','A06','A07'];
-    const idxA   = colsA.map(c => header.indexOf(c));
-    const idxCat = header.indexOf('CATEGORIES');
+    // El CSV tiene separador ; y el header real está en línea 2 (índice 1)
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const header = lines[1] ? lines[1].split(sep).map(h => h.trim()) : lines[0].split(sep).map(h => h.trim());
+    const dataStart = lines[1] ? 2 : 1;
+
+    const colMap = {};
+    header.forEach((h, i) => { colMap[h] = i; });
+
+    const COLS = ['ID','Motorway','SR','NR','TR','VR','SUR1','SUR2','SUR3','UR','FR','OR','RR','BR','MR','CR',
+                  'Green frogs','Brown frogs','Common toad','Fire-bellied toad','Common newt','Great crested newt'];
+
     const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim());
-      if (cols.length < 2) continue;
-      const vals   = idxA.map(ix => (ix >= 0 ? cols[ix] : '-'));
-      const realCat = idxCat >= 0 ? cols[idxCat].toUpperCase() : '?';
-      rows.push({ vals, realCat });
+    for (let i = dataStart; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim());
+      if (cols.length < 5) continue;
+      const row = {};
+      COLS.forEach(col => {
+        const idx = colMap[col];
+        row[col] = idx !== undefined ? (isNaN(cols[idx]) ? cols[idx] : parseFloat(cols[idx])) : 0;
+      });
+      const tfIdx = colMap['Tree frog'];
+      const realLabel = tfIdx !== undefined ? String(parseInt(cols[tfIdx]) || 0) : null;
+      rows.push({ row, realLabel });
     }
     csvData = { rows };
     const ok = document.getElementById('upload-ok');
@@ -695,7 +740,6 @@ function handleCSV(input) {
   reader.readAsText(file);
 }
 
-// Drag-and-drop
 const uz = document.getElementById('upload-zone');
 uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
 uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
@@ -706,7 +750,7 @@ uz.addEventListener('drop', e => {
 });
 
 // ==============================
-//  PREDICCIÓN POR LOTES + MATRIZ DE CONFUSIÓN
+//  PREDICCIÓN POR LOTES
 // ==============================
 async function predictBatch() {
   if (!csvData || !csvData.rows.length) { alert('Primero carga un archivo CSV.'); return; }
@@ -715,104 +759,97 @@ async function predictBatch() {
   btn.disabled = true;
   btn.textContent = `⏳ Procesando ${csvData.rows.length} registros...`;
 
-  let results;
+  let preds;
   try {
-    // Usar endpoint /predict/batch para eficiencia
-    const preds = await callBatchAPI(csvData.rows.map(r => r.vals), selModelBatch);
-    results = csvData.rows.map((r, i) => ({ ...r, pred: preds[i] }));
+    preds = await callBatchAPI(csvData.rows.map(r => r.row), selModelBatch);
   } catch (err) {
     alert('⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.');
-    btn.disabled = false;
-    btn.textContent = '⚡ PROCESAR CSV';
-    console.error(err);
-    return;
+    btn.disabled = false; btn.textContent = '⚡ PREDECIR LOTE + MATRIZ'; console.error(err); return;
   }
-  btn.disabled = false;
-  btn.textContent = '⚡ PROCESAR CSV';
+  btn.disabled = false; btn.textContent = '⚡ PREDECIR LOTE + MATRIZ';
 
-  // Tabla de resultados
+  const results = csvData.rows.map((r, i) => ({ ...r, pred: preds[i] }));
+  const hasReal = results.some(r => r.realLabel !== null);
+
+  // Tabla
   let html = `<div class="batch-results"><table class="batch-table"><thead><tr>
-    <th>#</th><th>Variables</th><th>Real</th><th>Predicción</th><th>Confianza</th><th>✓</th>
+    <th>#</th><th>ID</th><th>Predicción</th><th>Confianza</th>${hasReal ? '<th>Real</th><th>✓</th>' : ''}
   </tr></thead><tbody>`;
   results.forEach((r, i) => {
-    const conf      = (Math.max(...r.pred.probs) * 100).toFixed(1);
-    const ok        = r.pred.cat === r.realCat;
-    const predClass = CAT_CLASS[r.pred.cat] || '';
-    const wrongCls  = ok ? '' : ' pred-wrong';
+    const conf = (Math.max(...r.pred.probs) * 100).toFixed(1);
+    const cls  = r.pred.cat === '1' ? 'pred-presente' : 'pred-ausente';
+    const ok   = r.realLabel !== null && r.pred.cat === r.realLabel;
+    const wrongCls = hasReal && !ok ? ' pred-wrong' : '';
+    const rowId = r.row['ID'] || (i + 1);
     html += `<tr>
       <td>${i + 1}</td>
-      <td style="font-size:.62rem;color:var(--muted)">${r.vals.join(' ')}</td>
-      <td style="color:${CAT_COLORS[r.realCat] || 'var(--muted)'};font-weight:700">${r.realCat}</td>
-      <td class="${predClass}${wrongCls}">${r.pred.cat}</td>
+      <td>${rowId}</td>
+      <td class="${cls}${wrongCls}">${r.pred.label}</td>
       <td>${conf}%</td>
-      <td>${ok ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--danger)">✗</span>'}</td>
+      ${hasReal ? `<td style="color:${CAT_COLORS[r.realLabel]||'var(--muted)'}">${LABELS[r.realLabel]||'?'}</td>
+      <td>${ok ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--danger)">✗</span>'}</td>` : ''}
     </tr>`;
   });
   html += '</tbody></table></div>';
   document.getElementById('batch-results-container').innerHTML = html;
 
-  // Matriz de confusión
-  const cm = {};
-  CATS.forEach(r => { cm[r] = {}; CATS.forEach(c => { cm[r][c] = 0; }); });
-  results.forEach(r => {
-    if (cm[r.realCat] && cm[r.realCat][r.pred.cat] !== undefined) cm[r.realCat][r.pred.cat]++;
-  });
-
-  let cmHtml = `<table class="cm-table"><thead><tr><th></th>`;
-  CATS.forEach(c => cmHtml += `<th class="cm-th-row" style="color:${CAT_COLORS[c]}">${c}<br><span style="font-size:.55rem;color:var(--muted)">(Pred)</span></th>`);
-  cmHtml += '</tr></thead><tbody>';
-  CATS.forEach(real => {
-    cmHtml += `<tr><td class="cm-label-cell"><span style="color:${CAT_COLORS[real]}">${real}</span><br><span style="font-size:.55rem;color:var(--muted)">(Real)</span></td>`;
-    CATS.forEach(pred => {
-      const val   = cm[real][pred];
-      const isDiag = real === pred;
-      const cls   = val === 0 ? 'cm-zero' : isDiag ? 'cm-diagonal' : 'cm-off';
-      cmHtml += `<td class="cm-cell-val ${cls}">${val}</td>`;
+  // Matriz de confusión (solo si hay labels reales)
+  if (hasReal) {
+    const cm = { '0':{'0':0,'1':0}, '1':{'0':0,'1':0} };
+    results.forEach(r => {
+      if (r.realLabel !== null && cm[r.realLabel]) cm[r.realLabel][r.pred.cat]++;
     });
-    cmHtml += '</tr>';
-  });
-  cmHtml += '</tbody></table>';
-  document.getElementById('cm-table-container').innerHTML = cmHtml;
+    const LABELS_CM = ['0','1'];
+    let cmHtml = `<table class="cm-table"><thead><tr><th></th>`;
+    LABELS_CM.forEach(c => cmHtml += `<th class="cm-th-row" style="color:${CAT_COLORS[c]}">${LABELS[c]}<br><span style="font-size:.55rem;color:var(--muted)">(Pred)</span></th>`);
+    cmHtml += '</tr></thead><tbody>';
+    LABELS_CM.forEach(real => {
+      cmHtml += `<tr><td class="cm-label-cell"><span style="color:${CAT_COLORS[real]}">${LABELS[real]}</span><br><span style="font-size:.55rem;color:var(--muted)">(Real)</span></td>`;
+      LABELS_CM.forEach(pred => {
+        const val = cm[real][pred];
+        const cls = val === 0 ? 'cm-zero' : real === pred ? 'cm-diagonal' : 'cm-off';
+        cmHtml += `<td class="cm-cell-val ${cls}">${val}</td>`;
+      });
+      cmHtml += '</tr>';
+    });
+    cmHtml += '</tbody></table>';
+    document.getElementById('cm-table-container').innerHTML = cmHtml;
 
-  // Métricas macro
-  const total   = results.length;
-  const correct = results.filter(r => r.pred.cat === r.realCat).length;
-  const acc     = (correct / total * 100).toFixed(1);
-  let precSum = 0, recSum = 0, f1Sum = 0, validCats = 0;
-  CATS.forEach(cat => {
-    const tp = cm[cat][cat];
-    const fp = CATS.reduce((s, r) => r !== cat ? s + cm[r][cat] : s, 0);
-    const fn = CATS.reduce((s, c) => c !== cat ? s + cm[cat][c] : s, 0);
-    if (tp + fp + fn > 0) {
-      const prec = tp / (tp + fp) || 0;
-      const rec  = tp / (tp + fn) || 0;
-      const f1   = prec + rec > 0 ? 2 * prec * rec / (prec + rec) : 0;
-      precSum += prec; recSum += rec; f1Sum += f1; validCats++;
-    }
-  });
-  const prec = validCats > 0 ? (precSum / validCats * 100).toFixed(1) : '—';
-  const f1   = validCats > 0 ? (f1Sum   / validCats * 100).toFixed(1) : '—';
+    const total   = results.filter(r => r.realLabel !== null).length;
+    const correct = results.filter(r => r.realLabel !== null && r.pred.cat === r.realLabel).length;
+    const acc = (correct / total * 100).toFixed(1);
+    const tp = cm['1']['1'], fp = cm['0']['1'], fn = cm['1']['0'];
+    const prec = tp + fp > 0 ? (tp / (tp + fp) * 100).toFixed(1) : '—';
+    const rec  = tp + fn > 0 ? (tp / (tp + fn) * 100).toFixed(1) : '—';
+    const f1   = prec !== '—' && rec !== '—'
+      ? (2 * parseFloat(prec) * parseFloat(rec) / (parseFloat(prec) + parseFloat(rec))).toFixed(1) : '—';
 
-  document.getElementById('batch-metrics-badges').innerHTML = `
-    <div class="metric-badge"><div class="val">${total}</div><div class="lbl">Registros</div></div>
-    <div class="metric-badge"><div class="val" style="color:var(--green)">${acc}%</div><div class="lbl">Accuracy</div></div>
-    <div class="metric-badge"><div class="val">${prec}%</div><div class="lbl">Precision</div></div>
-    <div class="metric-badge"><div class="val">${f1}%</div><div class="lbl">F1-Score</div></div>`;
+    document.getElementById('batch-metrics-badges').innerHTML = `
+      <div class="metric-badge"><div class="val">${total}</div><div class="lbl">Registros</div></div>
+      <div class="metric-badge"><div class="val" style="color:var(--green)">${acc}%</div><div class="lbl">Accuracy</div></div>
+      <div class="metric-badge"><div class="val">${prec}%</div><div class="lbl">Precision</div></div>
+      <div class="metric-badge"><div class="val">${f1}%</div><div class="lbl">F1-Score</div></div>`;
+  } else {
+    const total = results.length;
+    const pres  = results.filter(r => r.pred.cat === '1').length;
+    document.getElementById('batch-metrics-badges').innerHTML = `
+      <div class="metric-badge"><div class="val">${total}</div><div class="lbl">Registros</div></div>
+      <div class="metric-badge"><div class="val" style="color:var(--green)">${pres}</div><div class="lbl">Presentes</div></div>
+      <div class="metric-badge"><div class="val" style="color:var(--gold)">${total - pres}</div><div class="lbl">Ausentes</div></div>
+      <div class="metric-badge"><div class="val">${(pres/total*100).toFixed(1)}%</div><div class="lbl">% Presencia</div></div>`;
+  }
 
-  // Gráfica donut
-  const counts = CATS.map(c => results.filter(r => r.pred.cat === c).length);
+  // Donut
+  const counts = ['0','1'].map(c => results.filter(r => r.pred.cat === c).length);
   const ctx2 = document.getElementById('batchChart').getContext('2d');
   if (batchChart) batchChart.destroy();
   batchChart = new Chart(ctx2, {
     type: 'doughnut',
     data: {
-      labels: CATS,
-      datasets: [{
-        data: counts,
-        backgroundColor: ['rgba(0,229,255,.7)', 'rgba(0,230,118,.7)', 'rgba(255,213,79,.7)'],
-        borderColor:      ['#00e5ff', '#00e676', '#ffd54f'],
-        borderWidth: 2
-      }]
+      labels: ['Ausente (0)', 'Presente (1)'],
+      datasets: [{ data: counts,
+        backgroundColor: ['rgba(255,213,79,.7)', 'rgba(0,230,118,.7)'],
+        borderColor: ['#ffd54f', '#00e676'], borderWidth: 2 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -845,16 +882,16 @@ function initMetricsChart() {
     data: {
       labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
       datasets: [
-        { label: 'Red Neuronal',    data: [97.2, 96.8, 97.1, 96.9], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,.1)', borderWidth: 2, pointBackgroundColor: '#00e5ff' },
-        { label: 'Reg. Logística',  data: [95.8, 95.2, 95.9, 95.5], borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,.1)', borderWidth: 2, pointBackgroundColor: '#00e676' }
+        { label: 'Red Neuronal',   data: [94.2, 94.1, 90.1, 92.1], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,.1)', borderWidth: 2, pointBackgroundColor: '#00e5ff' },
+        { label: 'Reg. Logística', data: [77.8, 73.0, 64.8, 68.7], borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,.1)', borderWidth: 2, pointBackgroundColor: '#00e676' }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
         r: {
-          min: 93, max: 100,
-          ticks: { color: '#7a9cc8', font: { family: 'Space Mono', size: 9 }, stepSize: 1, backdropColor: 'transparent' },
+          min: 60, max: 100,
+          ticks: { color: '#7a9cc8', font: { family: 'Space Mono', size: 9 }, stepSize: 10, backdropColor: 'transparent' },
           grid: { color: 'rgba(26,58,110,.5)' },
           angleLines: { color: 'rgba(26,58,110,.5)' },
           pointLabels: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 } }
@@ -866,7 +903,7 @@ function initMetricsChart() {
 }
 
 // ==============================
-//  ANIMAR BARRAS DE MÉTRICAS
+//  ANIMAR BARRAS
 // ==============================
 function animateBars() {
   document.querySelectorAll('.metric-fill[data-width]').forEach(el => {
@@ -876,7 +913,7 @@ function animateBars() {
 }
 
 // ==============================
-//  INTERSECTION OBSERVER (fade-in)
+//  INTERSECTION OBSERVER
 // ==============================
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
