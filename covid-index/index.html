@@ -3,922 +3,899 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anfibios ML Dashboard — Predicción de Presencia</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<title>AmphibiaML — Predicción de Presencia de Anfibios</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg:#040d1a;--surface:#071428;--surface2:#0b1d3a;--border:#1a3a6e;
-    --blue:#1e6fff;--blue-light:#4d9fff;--cyan:#00e5ff;--green:#00e676;
-    --green-dim:#00b85a;--white:#e8f4ff;--muted:#7a9cc8;--danger:#ff4b6e;
-    --gold:#ffd54f;--font-mono:'Space Mono',monospace;--font-body:'DM Sans',sans-serif;
-    --glow-blue:0 0 20px rgba(30,111,255,0.4);--glow-green:0 0 20px rgba(0,230,118,0.4);--glow-cyan:0 0 20px rgba(0,229,255,0.3);
-  }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
-  body{background:var(--bg);color:var(--white);font-family:var(--font-body);line-height:1.6;overflow-x:hidden;min-height:100vh;}
-  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,111,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(30,111,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+:root {
+  --moss:#3d6b47;--moss-dark:#2a4d32;--moss-light:#5a8f6a;
+  --leaf:#6aaa72;--leaf-light:#a8d5ae;
+  --water:#4a7fa5;--water-light:#7eb8d4;--water-pale:#d4eaf4;
+  --earth:#7a5c42;--earth-light:#b08968;
+  --sand:#e8dcc8;--cream:#f5f0e8;--stone:#8a9a8e;--stone-light:#c5cfc7;
+  --white:#fdfcf9;--text:#2c3a2e;--text-mid:#4a5e4d;--text-light:#7a9080;
+  --danger:#c0392b;--gold:#c49a3c;--gold-light:#e8c97a;
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'DM Sans',sans-serif;
+  --font-mono:'DM Mono',monospace;
+  --radius-sm:8px;--radius:16px;--radius-lg:24px;
+  --shadow-sm:0 2px 8px rgba(44,58,46,.08);
+  --shadow:0 6px 24px rgba(44,58,46,.12);
+  --shadow-lg:0 16px 48px rgba(44,58,46,.16);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--cream);color:var(--text);font-family:var(--font-body);line-height:1.65;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(106,170,114,.08) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 60% at 10% 80%,rgba(74,127,165,.07) 0%,transparent 60%),
+  radial-gradient(ellipse 70% 50% at 50% 50%,rgba(232,220,200,.4) 0%,transparent 80%);}
 
-  /* ===== LOGIN ===== */
-  #login-screen{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;background:rgba(4,13,26,0.97);backdrop-filter:blur(8px);}
-  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:360px;position:relative;}
-  .login-glow{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(0,229,255,0.12) 0%,transparent 70%);pointer-events:none;}
-  .l-logo{text-align:center;margin-bottom:1.5rem;}
-  .l-mark{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(30,111,255,0.15));border:1px solid rgba(0,229,255,0.3);border-radius:14px;font-size:1.5rem;margin-bottom:.75rem;}
-  .l-title{font-family:var(--font-mono);font-size:.85rem;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;}
-  .l-sub{font-size:.75rem;color:var(--muted);font-family:var(--font-mono);}
-  .l-field{margin-bottom:1rem;}
-  .l-field label{display:block;font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem;}
-  .l-field input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:.55rem .75rem;border-radius:8px;font-family:var(--font-mono);font-size:.8rem;outline:none;transition:border-color .2s,box-shadow .2s;}
-  .l-field input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
-  .l-btn{width:100%;margin-top:.5rem;padding:.75rem;background:linear-gradient(135deg,var(--blue),#1050cc);border:none;border-radius:8px;color:white;font-family:var(--font-mono);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .3s;}
-  .l-btn:hover{box-shadow:0 8px 24px rgba(30,111,255,.4);transform:translateY(-1px);}
-  .l-err{font-family:var(--font-mono);font-size:.68rem;color:var(--danger);text-align:center;margin-top:.75rem;min-height:1rem;}
-  .l-hint{font-family:var(--font-mono);font-size:.6rem;color:var(--border);text-align:center;margin-top:1rem;}
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#2a4d32 0%,#3d6b47 40%,#4a7fa5 100%);}
+.login-nature-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.login-nature-bg svg{position:absolute;bottom:0;left:0;width:100%;opacity:.15;}
+.login-box{position:relative;z-index:1;background:var(--white);border-radius:var(--radius-lg);
+  padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--shadow-lg);}
+.l-logo{text-align:center;margin-bottom:2rem;}
+.l-frog{font-size:3rem;display:block;margin-bottom:.5rem;}
+.l-brand{font-family:var(--font-display);font-size:1.6rem;color:var(--moss);font-weight:700;}
+.l-sub{font-size:.8rem;color:var(--text-light);margin-top:.25rem;}
+.l-field{margin-bottom:1.1rem;}
+.l-field label{display:block;font-size:.75rem;font-weight:600;color:var(--text-mid);margin-bottom:.4rem;letter-spacing:.03em;}
+.l-field input{width:100%;padding:.65rem .9rem;background:var(--cream);border:1.5px solid var(--stone-light);
+  border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:.9rem;outline:none;
+  transition:border-color .2s,box-shadow .2s;}
+.l-field input:focus{border-color:var(--moss);box-shadow:0 0 0 3px rgba(61,107,71,.12);}
+.l-btn{width:100%;margin-top:.5rem;padding:.8rem;background:linear-gradient(135deg,var(--moss),var(--moss-dark));
+  border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font-body);font-size:.9rem;
+  font-weight:600;cursor:pointer;transition:all .3s;letter-spacing:.02em;}
+.l-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(61,107,71,.4);}
+.l-err{font-size:.75rem;color:var(--danger);text-align:center;margin-top:.75rem;min-height:1rem;}
+.l-hint{font-size:.7rem;color:var(--stone);text-align:center;margin-top:1rem;}
 
-  /* ===== APP ===== */
-  #app{display:none;position:relative;z-index:1;}
-  header{position:sticky;top:0;z-index:100;background:rgba(4,13,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 2rem;}
-  .header-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px;gap:1rem;}
-  .logo{font-family:var(--font-mono);font-size:.85rem;color:var(--cyan);letter-spacing:.05em;white-space:nowrap;}
-  .logo span{color:var(--muted);}
-  nav{display:flex;gap:.25rem;flex-wrap:wrap;}
-  nav a{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);text-decoration:none;padding:.3rem .6rem;border:1px solid transparent;border-radius:4px;transition:all .2s;letter-spacing:.05em;white-space:nowrap;}
-  nav a:hover{color:var(--cyan);border-color:var(--border);background:rgba(0,229,255,.05);}
-  .hdr{display:flex;align-items:center;gap:.75rem;}
-  .status-pill{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.65rem;color:var(--green);padding:.3rem .7rem;background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.25);border-radius:20px;white-space:nowrap;}
-  .status-pill::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;box-shadow:var(--glow-green);animation:pulse 2s infinite;}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-  .logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:.62rem;padding:.3rem .7rem;border-radius:4px;cursor:pointer;letter-spacing:.05em;transition:all .2s;}
-  .logout-btn:hover{color:var(--danger);border-color:var(--danger);}
+/* APP */
+#app{display:none;position:relative;z-index:1;}
 
-  main{max-width:1300px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1;}
+/* HEADER */
+header{position:sticky;top:0;z-index:100;background:rgba(253,252,249,.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(138,154,142,.2);box-shadow:var(--shadow-sm);}
+.header-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;height:68px;gap:1.5rem;}
+.logo-wrap{display:flex;align-items:center;gap:.6rem;text-decoration:none;}
+.logo-icon{font-size:1.5rem;}
+.logo-text{font-family:var(--font-display);font-size:1.2rem;color:var(--moss);font-weight:700;}
+.logo-text span{color:var(--water);}
+nav{display:flex;gap:.25rem;align-items:center;}
+nav a{font-size:.82rem;font-weight:500;color:var(--text-mid);text-decoration:none;
+  padding:.4rem .75rem;border-radius:var(--radius-sm);transition:all .2s;}
+nav a:hover{color:var(--moss);background:rgba(61,107,71,.08);}
+.hdr-right{display:flex;align-items:center;gap:.75rem;}
+.status-badge{display:flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:500;color:var(--moss);
+  padding:.3rem .75rem;background:rgba(106,170,114,.12);border:1px solid rgba(106,170,114,.3);border-radius:20px;}
+.status-dot{width:7px;height:7px;background:var(--leaf);border-radius:50%;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+.logout-btn{background:transparent;border:1.5px solid var(--stone-light);color:var(--text-light);
+  font-family:var(--font-body);font-size:.78rem;padding:.35rem .8rem;border-radius:var(--radius-sm);
+  cursor:pointer;transition:all .2s;}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger);}
 
-  /* ===== HERO ===== */
-  .hero{padding:3rem 0 2.5rem;}
-  .hero-tag{font-family:var(--font-mono);font-size:.7rem;color:var(--cyan);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
-  .hero-tag::before{content:'';display:inline-block;width:24px;height:1px;background:var(--cyan);}
-  .hero h1{font-family:var(--font-mono);font-size:clamp(1.8rem,5vw,3rem);font-weight:700;line-height:1.1;margin-bottom:1rem;}
-  .hero h1 .a1{color:var(--cyan);} .hero h1 .a2{color:var(--green);}
-  .hero-desc{max-width:600px;color:var(--muted);font-size:1rem;margin-bottom:2rem;font-weight:300;}
-  .hero-stats{display:flex;gap:2rem;flex-wrap:wrap;}
-  .stat-item{display:flex;flex-direction:column;}
-  .stat-val{font-family:var(--font-mono);font-size:1.8rem;font-weight:700;color:var(--blue-light);line-height:1;}
-  .stat-label{font-size:.75rem;color:var(--muted);margin-top:.25rem;font-family:var(--font-mono);}
+/* MAIN */
+main{max-width:1240px;margin:0 auto;padding:0 1.5rem 5rem;}
 
-  /* ===== SECTIONS ===== */
-  section{margin-bottom:3rem;scroll-margin-top:80px;}
-  .sec-hdr{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);}
-  .sec-icon{font-size:1.1rem;}
-  .sec-title{font-family:var(--font-mono);font-size:.8rem;color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;}
-  .sec-num{font-family:var(--font-mono);font-size:.65rem;color:var(--border);margin-left:auto;}
+/* HERO */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;padding:4rem 0 3rem;}
+.hero-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.75rem;font-weight:600;color:var(--moss);
+  background:rgba(61,107,71,.1);border:1px solid rgba(61,107,71,.2);
+  padding:.3rem .75rem;border-radius:20px;margin-bottom:1.25rem;}
+.hero h1{font-family:var(--font-display);font-size:clamp(2rem,4vw,3.2rem);line-height:1.15;color:var(--text);margin-bottom:1rem;}
+.hero h1 em{color:var(--moss);font-style:italic;}
+.hero h1 .accent{color:var(--water);}
+.hero-desc{font-size:1rem;color:var(--text-mid);max-width:480px;line-height:1.75;margin-bottom:2rem;}
+.hero-cta{display:inline-flex;align-items:center;gap:.5rem;
+  background:linear-gradient(135deg,var(--moss),var(--moss-dark));
+  color:#fff;font-weight:600;font-size:.9rem;padding:.75rem 1.5rem;
+  border-radius:var(--radius-sm);text-decoration:none;transition:all .3s;cursor:pointer;border:none;}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(61,107,71,.35);}
+.hero-stats{display:flex;gap:2rem;margin-top:2rem;flex-wrap:wrap;}
+.stat{display:flex;flex-direction:column;}
+.stat-n{font-family:var(--font-display);font-size:2rem;font-weight:700;color:var(--moss);line-height:1;}
+.stat-l{font-size:.75rem;color:var(--text-light);margin-top:.2rem;font-weight:500;}
+.hero-visual{position:relative;display:flex;align-items:center;justify-content:center;}
+.hero-card{background:var(--white);border-radius:var(--radius-lg);padding:2rem;
+  box-shadow:var(--shadow-lg);position:relative;overflow:hidden;width:100%;}
+.hero-card::before{content:'';position:absolute;top:0;right:0;width:180px;height:180px;
+  background:radial-gradient(circle,rgba(106,170,114,.15) 0%,transparent 70%);}
+.hero-frog{font-size:5rem;text-align:center;display:block;margin-bottom:1rem;}
+.habitat-tags{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;}
+.htag{font-size:.72rem;font-weight:500;padding:.3rem .65rem;border-radius:20px;}
+.htag-moss{background:rgba(61,107,71,.1);color:var(--moss);}
+.htag-water{background:rgba(74,127,165,.1);color:var(--water);}
+.htag-earth{background:rgba(122,92,66,.1);color:var(--earth);}
+.htag-gold{background:rgba(196,154,60,.1);color:var(--gold);}
 
-  /* ===== CARDS ===== */
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;transition:border-color .3s,box-shadow .3s;}
-  .card:hover{border-color:rgba(30,111,255,.5);box-shadow:var(--glow-blue);}
-  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;}
-  .card h3{font-family:var(--font-mono);font-size:.85rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
-  .badge{display:inline-block;padding:.15rem .5rem;border-radius:4px;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.05em;text-transform:uppercase;font-weight:700;}
-  .badge-blue{background:rgba(30,111,255,.2);color:var(--blue-light);border:1px solid rgba(30,111,255,.3);}
-  .badge-green{background:rgba(0,230,118,.15);color:var(--green);border:1px solid rgba(0,230,118,.3);}
-  .badge-cyan{background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.25);}
-  .badge-gold{background:rgba(255,213,79,.1);color:var(--gold);border:1px solid rgba(255,213,79,.25);}
-  .card p{font-size:.9rem;color:var(--muted);line-height:1.7;}
-  .spec-list{list-style:none;margin-top:.75rem;}
-  .spec-list li{display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid rgba(26,58,110,.5);font-size:.82rem;}
-  .spec-list li:last-child{border-bottom:none;}
-  .spec-key{color:var(--muted);font-family:var(--font-mono);font-size:.72rem;}
-  .spec-val{color:var(--cyan);font-family:var(--font-mono);font-size:.72rem;}
-  .intro-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+/* SECTIONS */
+section{margin-bottom:4rem;scroll-margin-top:90px;}
+.sec-label{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:600;
+  color:var(--text-light);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.6rem;}
+.sec-label::before{content:'';display:inline-block;width:20px;height:2px;background:var(--moss);border-radius:1px;}
+.sec-title{font-family:var(--font-display);font-size:clamp(1.5rem,3vw,2rem);color:var(--text);margin-bottom:.75rem;}
+.sec-desc{color:var(--text-mid);max-width:640px;font-size:.95rem;margin-bottom:2rem;}
 
-  /* ===== RESULTS ===== */
-  .results-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-  .metric-row{display:flex;flex-direction:column;gap:.6rem;margin-top:.75rem;}
-  .metric-item{display:block;padding:.35rem 0;}
-  .metric-header{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:.72rem;margin-bottom:.25rem;}
-  .metric-name{color:var(--muted);}
-  .metric-value{color:inherit;font-family:var(--font-mono);font-size:.78rem;font-weight:700;}
-  .metric-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
-  .metric-fill{height:100%;border-radius:3px;transition:width 1.5s cubic-bezier(.4,0,.2,1);width:0;}
-  .fill-blue{background:linear-gradient(90deg,var(--blue),var(--blue-light));}
-  .fill-green{background:linear-gradient(90deg,var(--green-dim),var(--green));}
-  .chart-wrapper{position:relative;height:200px;}
+/* CARDS */
+.card{background:var(--white);border-radius:var(--radius);padding:1.75rem;
+  box-shadow:var(--shadow-sm);border:1px solid rgba(138,154,142,.15);transition:box-shadow .3s,transform .3s;}
+.card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+.card-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
+.card-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;}
+.card-icon{font-size:2rem;margin-bottom:.75rem;}
+.card-title{font-family:var(--font-display);font-size:1.05rem;color:var(--text);margin-bottom:.5rem;}
+.card-body{font-size:.88rem;color:var(--text-mid);line-height:1.7;}
+.divider{width:100%;height:1px;background:rgba(138,154,142,.2);margin:1rem 0;}
 
-  /* ===== PREDICTOR ===== */
-  .predictor-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
-  .form-section h4{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:1rem;}
-  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-  .form-field{display:flex;flex-direction:column;gap:.3rem;}
-  .form-field label{font-family:var(--font-mono);font-size:.62rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;}
-  .form-field select,.form-field input[type=number]{background:var(--surface2);border:1px solid var(--border);color:var(--white);padding:.45rem .6rem;border-radius:6px;font-family:var(--font-mono);font-size:.75rem;outline:none;cursor:pointer;transition:border-color .2s;}
-  .form-field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9cc8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .6rem center;padding-right:2rem;}
-  .form-field input[type=number]::-webkit-inner-spin-button{opacity:.5;}
-  .form-field select:focus,.form-field input[type=number]:focus{border-color:var(--blue);}
-  .model-toggle{display:flex;gap:.5rem;margin-bottom:1rem;}
-  .model-btn{flex:1;padding:.5rem;text-align:center;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-family:var(--font-mono);font-size:.68rem;color:var(--muted);transition:all .2s;user-select:none;}
-  .model-btn.active{background:rgba(30,111,255,.15);border-color:var(--blue);color:var(--blue-light);}
-  .tab-bar{display:flex;gap:.5rem;margin-bottom:1.5rem;}
-  .tab-btn{padding:.55rem 1.25rem;background:var(--surface);border:1px solid var(--border);color:var(--muted);border-radius:8px;cursor:pointer;font-family:var(--font-mono);font-size:.7rem;letter-spacing:.05em;transition:all .2s;}
-  .tab-btn.active{background:rgba(30,111,255,.15);border-color:var(--blue);color:var(--blue-light);}
-  .tab-content{display:none;}
-  .tab-content.active{display:block;}
-  .result-panel{min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:.5rem;}
-  .result-placeholder{font-family:var(--font-mono);font-size:.72rem;color:var(--border);text-align:center;}
-  .result-value{font-family:var(--font-mono);font-size:2.2rem;font-weight:700;letter-spacing:.05em;}
-  .result-confidence{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin-top:.25rem;}
-  .result-confidence span{color:var(--cyan);}
-  .predict-btn{width:100%;margin-top:1rem;padding:.85rem;background:linear-gradient(135deg,var(--blue),#1050cc);border:none;border-radius:8px;color:white;font-family:var(--font-mono);font-size:.75rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .3s;text-transform:uppercase;}
-  .predict-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,111,255,.4);}
-  .predict-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
-  .upload-zone{border:2px dashed var(--border);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;}
-  .upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:rgba(30,111,255,.04);}
-  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
-  .upload-icon{font-size:1.8rem;margin-bottom:.5rem;}
-  .upload-label{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);}
-  .upload-sub{font-family:var(--font-mono);font-size:.62rem;color:var(--border);margin-top:.25rem;}
-  .upload-ok{font-family:var(--font-mono);font-size:.72rem;color:var(--green);margin-top:.5rem;display:none;}
+/* DATASET */
+.dataset-grid{display:grid;grid-template-columns:2fr 1fr;gap:1.5rem;align-items:start;}
+.spec-table{width:100%;border-collapse:collapse;font-size:.85rem;}
+.spec-table tr{border-bottom:1px solid rgba(138,154,142,.15);}
+.spec-table tr:last-child{border-bottom:none;}
+.spec-table td{padding:.65rem .5rem;}
+.spec-table td:first-child{color:var(--text-light);font-weight:500;width:45%;}
+.spec-table td:last-child{color:var(--text);font-weight:600;font-family:var(--font-mono);font-size:.8rem;}
+.chip{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;}
+.chip-moss{background:rgba(61,107,71,.1);color:var(--moss);}
 
-  /* ===== CONFUSION MATRIX ===== */
-  .cm-container{margin-top:1rem;}
-  .cm-table{width:100%;border-collapse:separate;border-spacing:4px;font-family:var(--font-mono);font-size:.72rem;}
-  .cm-table th{padding:.5rem .75rem;font-size:.6rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:center;}
-  .cm-th-row{color:var(--cyan)!important;}
-  .cm-cell-val{padding:.75rem;text-align:center;border-radius:6px;font-weight:700;font-size:1.1rem;transition:all .3s;}
-  .cm-diagonal{background:rgba(0,230,118,.2);color:var(--green);border:1px solid rgba(0,230,118,.3);}
-  .cm-off{background:rgba(255,75,110,.12);color:var(--danger);border:1px solid rgba(255,75,110,.2);}
-  .cm-zero{background:var(--surface2);color:var(--border);border:1px solid var(--border);}
-  .cm-label-cell{font-family:var(--font-mono);font-size:.65rem;color:var(--cyan);text-align:right;padding:.5rem .75rem .5rem 0;white-space:nowrap;}
+/* METRICS */
+.metrics-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.metric-box{background:var(--white);border-radius:var(--radius);padding:1.25rem;text-align:center;
+  box-shadow:var(--shadow-sm);border:1px solid rgba(138,154,142,.15);}
+.metric-box .val{font-family:var(--font-display);font-size:2rem;font-weight:700;line-height:1;}
+.metric-box .lbl{font-size:.72rem;color:var(--text-light);margin-top:.3rem;font-weight:500;}
+.metric-row{display:flex;flex-direction:column;gap:.8rem;}
+.mrow{display:flex;flex-direction:column;gap:.25rem;}
+.mrow-header{display:flex;justify-content:space-between;font-size:.82rem;}
+.mrow-name{color:var(--text-mid);font-weight:500;}
+.mrow-val{font-weight:700;}
+.mbar{height:8px;background:rgba(138,154,142,.2);border-radius:4px;overflow:hidden;}
+.mfill{height:100%;border-radius:4px;transition:width 1.5s cubic-bezier(.4,0,.2,1);width:0;}
+.fill-moss{background:linear-gradient(90deg,var(--moss-light),var(--moss));}
+.fill-water{background:linear-gradient(90deg,var(--water-light),var(--water));}
 
-  /* ===== BATCH TABLE ===== */
-  .batch-results{overflow-x:auto;margin-top:.75rem;max-height:320px;overflow-y:auto;}
-  .batch-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.72rem;}
-  .batch-table th{padding:.5rem .75rem;color:var(--cyan);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;background:var(--surface);}
-  .batch-table td{padding:.5rem .75rem;border-bottom:1px solid rgba(26,58,110,.3);color:var(--muted);}
-  .pred-presente{color:var(--green);font-weight:700;}
-  .pred-ausente{color:var(--gold);font-weight:700;}
-  .pred-wrong{color:var(--danger)!important;}
+/* SPECIES */
+.species-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+.sp-card{background:var(--white);border-radius:var(--radius);overflow:hidden;
+  box-shadow:var(--shadow-sm);border:1px solid rgba(138,154,142,.15);transition:all .3s;}
+.sp-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+.sp-header{padding:1.5rem 1.25rem 1rem;background:linear-gradient(135deg,rgba(61,107,71,.06),rgba(74,127,165,.06));}
+.sp-emoji{font-size:2.5rem;display:block;margin-bottom:.4rem;}
+.sp-name{font-family:var(--font-display);font-size:.95rem;color:var(--text);font-weight:700;}
+.sp-latin{font-size:.72rem;color:var(--text-light);font-style:italic;margin-top:.1rem;}
+.sp-body{padding:1rem 1.25rem 1.25rem;font-size:.8rem;color:var(--text-mid);line-height:1.65;}
+.sp-status{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:600;
+  margin-top:.6rem;padding:.2rem .6rem;border-radius:20px;}
+.sp-lc{background:rgba(61,107,71,.1);color:var(--moss);}
+.sp-nt{background:rgba(196,154,60,.1);color:var(--gold);}
+.sp-vu{background:rgba(192,57,43,.1);color:var(--danger);}
 
-  /* ===== METRICS BADGES ===== */
-  .metrics-row-2{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1rem;}
-  .metric-badge{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem;text-align:center;}
-  .metric-badge .val{font-family:var(--font-mono);font-size:1.3rem;font-weight:700;color:var(--cyan);}
-  .metric-badge .lbl{font-family:var(--font-mono);font-size:.6rem;color:var(--muted);margin-top:.25rem;letter-spacing:.05em;text-transform:uppercase;}
+/* PREDICTOR */
+.tab-nav{display:flex;gap:.5rem;margin-bottom:2rem;}
+.tnav{padding:.55rem 1.4rem;border-radius:var(--radius-sm);font-size:.85rem;font-weight:600;cursor:pointer;
+  border:1.5px solid var(--stone-light);color:var(--text-mid);background:transparent;
+  transition:all .2s;font-family:var(--font-body);}
+.tnav.active{background:var(--moss);border-color:var(--moss);color:#fff;}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+.predictor-layout{display:grid;grid-template-columns:3fr 2fr;gap:1.75rem;align-items:start;}
 
-  /* ===== MISC ===== */
-  footer{border-top:1px solid var(--border);padding:1.5rem 2rem;text-align:center;font-family:var(--font-mono);font-size:.65rem;color:var(--border);position:relative;z-index:1;}
-  footer span{color:var(--muted);}
-  ::-webkit-scrollbar{width:4px;height:4px;}
-  ::-webkit-scrollbar-track{background:var(--bg);}
-  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-  .fade-in{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
-  .fade-in.visible{opacity:1;transform:translateY(0);}
-  .form-section-scroll{max-height:420px;overflow-y:auto;padding-right:.25rem;}
+.eco-form{background:var(--white);border-radius:var(--radius-lg);padding:2rem;
+  box-shadow:var(--shadow);border:1px solid rgba(138,154,142,.15);}
+.model-select{display:flex;gap:.5rem;margin-bottom:1.75rem;}
+.msel{flex:1;padding:.6rem;text-align:center;border:1.5px solid var(--stone-light);
+  border-radius:var(--radius-sm);cursor:pointer;font-size:.82rem;font-weight:600;
+  color:var(--text-mid);transition:all .2s;font-family:var(--font-body);background:transparent;}
+.msel.active{background:var(--moss);border-color:var(--moss);color:#fff;}
 
-  @media(max-width:760px){
-    .results-grid,.predictor-layout,.intro-grid{grid-template-columns:1fr;}
-    .metrics-row-2{grid-template-columns:repeat(2,1fr);}
-  }
-  @media(max-width:640px){
-    header{padding:0 1rem;}
-    nav{display:none;}
-    main{padding:1.5rem 1rem 3rem;}
-    .hero{padding:2rem 0 1.5rem;}
-  }
+.form-section{margin-bottom:1.75rem;}
+.fsec-header{display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;padding-bottom:.6rem;
+  border-bottom:1px solid rgba(138,154,142,.2);}
+.fsec-icon{font-size:1.1rem;}
+.fsec-title{font-size:.8rem;font-weight:700;color:var(--text);letter-spacing:.04em;text-transform:uppercase;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+.ff{display:flex;flex-direction:column;gap:.3rem;}
+.ff label{font-size:.72rem;font-weight:600;color:var(--text-mid);display:flex;align-items:center;gap:.3rem;}
+.ff label .tip{font-size:.65rem;color:var(--text-light);font-weight:400;cursor:help;}
+.ff select,.ff input[type=number]{background:var(--cream);border:1.5px solid var(--stone-light);
+  color:var(--text);padding:.5rem .7rem;border-radius:var(--radius-sm);font-family:var(--font-body);
+  font-size:.83rem;outline:none;transition:border-color .2s,box-shadow .2s;}
+.ff select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9080'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .7rem center;padding-right:2rem;}
+.ff select:focus,.ff input[type=number]:focus{border-color:var(--moss);box-shadow:0 0 0 3px rgba(61,107,71,.1);}
+.form-scroll{max-height:480px;overflow-y:auto;padding-right:.25rem;}
+
+.species-checks{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+.scheck{display:flex;align-items:center;gap:.5rem;}
+.scheck input[type=checkbox]{accent-color:var(--moss);width:14px;height:14px;cursor:pointer;}
+.scheck label{font-size:.8rem;color:var(--text-mid);cursor:pointer;}
+
+.predict-btn{width:100%;margin-top:1.5rem;padding:.9rem;
+  background:linear-gradient(135deg,var(--moss),var(--moss-dark));
+  border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font-body);
+  font-size:.95rem;font-weight:600;cursor:pointer;transition:all .3s;
+  display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.predict-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(61,107,71,.4);}
+.predict-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+/* RESULT */
+.result-panel{background:var(--white);border-radius:var(--radius-lg);padding:1.75rem;
+  box-shadow:var(--shadow);border:1px solid rgba(138,154,142,.15);}
+.result-empty{text-align:center;padding:2rem 0;color:var(--text-light);font-size:.88rem;line-height:1.7;}
+.result-empty .big{font-size:3rem;display:block;margin-bottom:.75rem;}
+.result-verdict{text-align:center;padding:1.5rem 1rem;margin-bottom:1.25rem;
+  border-radius:var(--radius);background:var(--cream);}
+.verdict-frog{font-size:3.5rem;display:block;margin-bottom:.5rem;}
+.verdict-label{font-family:var(--font-display);font-size:1.5rem;font-weight:700;}
+.verdict-sub{font-size:.82rem;color:var(--text-light);margin-top:.2rem;}
+.verdict-conf{display:inline-flex;align-items:center;gap:.3rem;font-size:.78rem;
+  font-weight:600;padding:.3rem .8rem;border-radius:20px;margin-top:.75rem;}
+.conf-present{background:rgba(61,107,71,.1);color:var(--moss);}
+.conf-absent{background:rgba(122,92,66,.1);color:var(--earth);}
+.interp-box{background:rgba(168,213,174,.15);border:1px solid rgba(106,170,114,.3);
+  border-radius:var(--radius-sm);padding:1rem;margin-bottom:1.25rem;
+  font-size:.83rem;color:var(--text-mid);line-height:1.7;}
+.interp-box.low{background:rgba(184,137,104,.1);border-color:rgba(184,137,104,.25);}
+.prob-chart-wrap{height:160px;margin-top:.75rem;}
+
+/* BATCH */
+.batch-layout{display:grid;grid-template-columns:1fr 2fr;gap:1.75rem;align-items:start;}
+.upload-area{background:var(--white);border-radius:var(--radius-lg);padding:2rem;
+  box-shadow:var(--shadow-sm);border:1px solid rgba(138,154,142,.15);}
+.upload-zone{border:2px dashed var(--stone-light);border-radius:var(--radius);
+  padding:2rem;text-align:center;position:relative;cursor:pointer;
+  transition:all .2s;background:var(--cream);}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--moss);background:rgba(61,107,71,.04);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon-big{font-size:2.5rem;display:block;margin-bottom:.5rem;}
+.upload-text{font-size:.85rem;font-weight:600;color:var(--text-mid);}
+.upload-sub{font-size:.73rem;color:var(--text-light);margin-top:.3rem;}
+.upload-ok{display:none;font-size:.78rem;color:var(--moss);font-weight:600;margin-top:.75rem;}
+.fmt-note{margin-top:1rem;padding:.75rem;background:rgba(74,127,165,.06);
+  border:1px solid rgba(74,127,165,.15);border-radius:var(--radius-sm);
+  font-size:.75rem;color:var(--text-light);line-height:1.6;}
+
+.batch-results-area{background:var(--white);border-radius:var(--radius-lg);padding:1.75rem;
+  box-shadow:var(--shadow);border:1px solid rgba(138,154,142,.15);}
+.batch-placeholder{text-align:center;padding:3rem 1rem;color:var(--text-light);font-size:.88rem;}
+.batch-placeholder .big{font-size:2.5rem;display:block;margin-bottom:.5rem;}
+.results-table-wrap{overflow-x:auto;max-height:320px;overflow-y:auto;
+  border-radius:var(--radius-sm);border:1px solid rgba(138,154,142,.15);}
+.eco-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+.eco-table th{padding:.6rem 1rem;background:var(--cream);color:var(--text-mid);font-weight:600;
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;text-align:left;
+  border-bottom:1px solid rgba(138,154,142,.2);position:sticky;top:0;}
+.eco-table td{padding:.55rem 1rem;border-bottom:1px solid rgba(138,154,142,.1);color:var(--text-mid);}
+.eco-table tr:last-child td{border-bottom:none;}
+.present{color:var(--moss);font-weight:700;}
+.absent{color:var(--earth);font-weight:700;}
+.wrong{color:var(--danger)!important;}
+.check-ok{color:var(--moss);}
+.check-no{color:var(--danger);}
+
+/* CONFUSION */
+.metrics-badges{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.5rem;}
+.mbadge{background:var(--white);border-radius:var(--radius);padding:1rem;text-align:center;
+  border:1px solid rgba(138,154,142,.15);box-shadow:var(--shadow-sm);}
+.mbadge .val{font-family:var(--font-display);font-size:1.6rem;font-weight:700;color:var(--moss);}
+.mbadge .lbl{font-size:.68rem;color:var(--text-light);margin-top:.2rem;font-weight:500;
+  text-transform:uppercase;letter-spacing:.04em;}
+.cm-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.cm-table{width:100%;border-collapse:separate;border-spacing:5px;}
+.cm-table th{font-size:.68rem;color:var(--text-light);font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;text-align:center;padding:.4rem;}
+.cm-cell{padding:.9rem;text-align:center;border-radius:var(--radius-sm);font-weight:700;font-size:1.1rem;}
+.cm-tp{background:rgba(61,107,71,.15);color:var(--moss);}
+.cm-tn{background:rgba(74,127,165,.12);color:var(--water);}
+.cm-fp{background:rgba(192,57,43,.1);color:var(--danger);}
+.cm-fn{background:rgba(192,57,43,.1);color:var(--danger);}
+.cm-rowlabel{font-size:.72rem;color:var(--text-mid);font-weight:600;text-align:right;padding:.4rem .5rem;}
+
+/* EDUCATION */
+.edu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;}
+.edu-card{background:var(--white);border-radius:var(--radius);padding:1.75rem;
+  box-shadow:var(--shadow-sm);border:1px solid rgba(138,154,142,.15);border-top:3px solid var(--moss);}
+.edu-card.water{border-top-color:var(--water);}
+.edu-card.earth{border-top-color:var(--earth-light);}
+.edu-card.gold{border-top-color:var(--gold);}
+.edu-icon{font-size:2rem;margin-bottom:.75rem;display:block;}
+.edu-title{font-family:var(--font-display);font-size:1rem;color:var(--text);margin-bottom:.5rem;}
+.edu-body{font-size:.83rem;color:var(--text-mid);line-height:1.75;}
+
+/* FOOTER */
+footer{border-top:1px solid rgba(138,154,142,.2);padding:2rem 1.5rem;text-align:center;
+  font-size:.78rem;color:var(--text-light);background:var(--white);}
+footer strong{color:var(--moss);}
+
+/* ANIMATION */
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease;}
+.fade-in.visible{opacity:1;transform:translateY(0);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--cream);}
+::-webkit-scrollbar-thumb{background:var(--stone-light);border-radius:3px;}
+
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;}.hero-visual{display:none;}
+  .dataset-grid,.predictor-layout,.batch-layout{grid-template-columns:1fr;}
+  .card-grid-2,.card-grid-3,.edu-grid,.species-grid{grid-template-columns:1fr 1fr;}
+  .metrics-hero,.metrics-badges{grid-template-columns:repeat(2,1fr);}
+  .cm-grid{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .header-inner{padding:0 1rem;}nav{display:none;}main{padding:0 1rem 4rem;}
+  .card-grid-2,.card-grid-3,.edu-grid,.species-grid,.form-grid{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
 
-<!-- ===== LOGIN ===== -->
+<!-- LOGIN -->
 <div id="login-screen">
-  <div style="position:relative">
-    <div class="login-glow"></div>
-    <div class="login-box">
-      <div class="l-logo">
-        <div class="l-mark">🐸</div>
-        <div class="l-title">ANFIBIOS/ML</div>
-        <div class="l-sub">Predicción de Presencia de Especies</div>
-      </div>
-      <div class="l-field">
-        <label>Usuario</label>
-        <input type="text" id="l-user" placeholder="Ingresa tu usuario" autocomplete="off">
-      </div>
-      <div class="l-field">
-        <label>Contraseña</label>
-        <input type="password" id="l-pass" placeholder="Ingresa tu contraseña">
-      </div>
-      <button class="l-btn" onclick="doLogin()">⚡ Acceder al Sistema</button>
-      <div class="l-err" id="l-err"></div>
-      <div class="l-hint">usuario: admin &nbsp;|&nbsp; contraseña: covid2026</div>
+  <div class="login-nature-bg">
+    <svg viewBox="0 0 1440 200" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,160 Q180,80 360,140 Q540,200 720,120 Q900,40 1080,110 Q1260,180 1440,100 L1440,200 L0,200 Z" fill="white"/>
+    </svg>
+  </div>
+  <div class="login-box">
+    <div class="l-logo">
+      <span class="l-frog">🐸</span>
+      <div class="l-brand">AmphibiaML</div>
+      <div class="l-sub">Plataforma de Monitoreo Ecológico · IA</div>
     </div>
+    <div class="l-field"><label>Usuario</label><input type="text" id="l-user" placeholder="Ingresa tu usuario" autocomplete="off"></div>
+    <div class="l-field"><label>Contraseña</label><input type="password" id="l-pass" placeholder="Ingresa tu contraseña"></div>
+    <button class="l-btn" onclick="doLogin()">🌿 Ingresar al Sistema</button>
+    <div class="l-err" id="l-err"></div>
+    <div class="l-hint">usuario: admin &nbsp;·&nbsp; contraseña: anfibios2026</div>
   </div>
 </div>
 
-<!-- ===== APP ===== -->
+<!-- APP -->
 <div id="app">
 <header>
   <div class="header-inner">
-    <div class="logo">ANFIBIOS<span>/</span>ML <span>—</span> Predictor</div>
+    <a class="logo-wrap" href="#inicio"><span class="logo-icon">🐸</span><span class="logo-text">Amphibia<span>ML</span></span></a>
     <nav>
-      <a href="#intro">Intro</a>
-      <a href="#resultados">Resultados</a>
-      <a href="#predictor">Predictor</a>
+      <a href="#inicio">Inicio</a><a href="#dataset">Dataset</a><a href="#especies">Especies</a>
+      <a href="#resultados">Resultados</a><a href="#prediccion">Predicción</a><a href="#acerca">Acerca del Proyecto</a>
     </nav>
-    <div class="hdr">
-      <div class="status-pill" id="status-pill">VERIFICANDO...</div>
-      <button class="logout-btn" onclick="doLogout()">↩ Salir</button>
+    <div class="hdr-right">
+      <div class="status-badge" id="status-badge"><span class="status-dot"></span><span id="status-text">Conectando...</span></div>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
 </header>
 
 <main>
 
-  <!-- HERO -->
+<!-- HERO -->
+<section id="inicio">
   <div class="hero fade-in">
-    <div class="hero-tag">Proyecto Final · Individual · Entrega 11-MAY-2026</div>
-    <h1>
-      Predicción de<br>
-      <span class="a1">Presencia de</span><br>
-      <span class="a2">Tree Frog 🐸</span>
-    </h1>
-    <p class="hero-desc">
-      Sistema de Machine Learning para predecir la presencia de <em>rana arborícola</em> en zonas
-      cercanas a carreteras, basado en variables ecológicas del repositorio UCI.
-    </p>
-    <div class="hero-stats">
-      <div class="stat-item"><div class="stat-val">2</div><div class="stat-label">MODELOS ML</div></div>
-      <div class="stat-item"><div class="stat-val">94.2%</div><div class="stat-label">ACC RED NEURONAL</div></div>
-      <div class="stat-item"><div class="stat-val">77.8%</div><div class="stat-label">ACC REG. LOGÍSTICA</div></div>
-      <div class="stat-item"><div class="stat-val">189</div><div class="stat-label">REGISTROS UCI</div></div>
+    <div class="hero-left">
+      <div class="hero-badge">🌿 Investigación Ambiental · Machine Learning</div>
+      <h1>Predicción de <em>Presencia</em> de<br><span class="accent">Rana Arborícola</span></h1>
+      <p class="hero-desc">Sistema de inteligencia artificial entrenado con el dataset UCI Amphibians para analizar condiciones de hábitat y predecir la presencia de <em>Tree frog</em> en ecosistemas cercanos a vías.</p>
+      <button class="hero-cta" onclick="document.getElementById('prediccion').scrollIntoView({behavior:'smooth'})">🔬 Analizar Hábitat</button>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-n">189</span><span class="stat-l">Registros UCI</span></div>
+        <div class="stat"><span class="stat-n">22</span><span class="stat-l">Variables</span></div>
+        <div class="stat"><span class="stat-n">80.7%</span><span class="stat-l">Mejor Accuracy</span></div>
+        <div class="stat"><span class="stat-n">2</span><span class="stat-l">Modelos ML</span></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card">
+        <span class="hero-frog">🐸</span>
+        <div style="text-align:center;font-family:var(--font-display);font-size:1rem;color:var(--text);margin-bottom:1rem;"><em>Hyla arborea</em> — Rana Arborícola</div>
+        <div class="habitat-tags">
+          <span class="htag htag-moss">🌿 Humedal</span><span class="htag htag-water">💧 Laguna</span>
+          <span class="htag htag-earth">🌱 Vegetación</span><span class="htag htag-gold">🔬 Investigación</span>
+          <span class="htag htag-moss">🛣️ Carretera</span><span class="htag htag-water">🌍 Conservación</span>
+        </div>
+        <div class="divider" style="margin:1.25rem 0;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-size:.8rem;">
+          <div style="background:rgba(61,107,71,.06);border-radius:var(--radius-sm);padding:.75rem;text-align:center;">
+            <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--moss);">80.7%</div>
+            <div style="color:var(--text-light);font-size:.7rem;margin-top:.2rem;">Red Neuronal</div>
+          </div>
+          <div style="background:rgba(74,127,165,.06);border-radius:var(--radius-sm);padding:.75rem;text-align:center;">
+            <div style="font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--water);">77.2%</div>
+            <div style="color:var(--text-light);font-size:.7rem;margin-top:.2rem;">Reg. Logística</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DATASET -->
+<section id="dataset" class="fade-in">
+  <div class="sec-label">02 · Dataset</div>
+  <h2 class="sec-title">UCI Amphibians Dataset</h2>
+  <p class="sec-desc">Datos recolectados en carreteras de Polonia para estudiar la presencia de anfibios en zonas de riesgo ecológico.</p>
+  <div class="dataset-grid">
+    <div class="card">
+      <h3 class="card-title">📋 Descripción del Dataset</h3>
+      <p class="card-body" style="margin-bottom:1rem;">El dataset <strong>Amphibians (UCI)</strong> contiene 189 registros con mediciones ecológicas y de infraestructura vial, recolectadas en diferentes tramos de carretera en Polonia. El objetivo es predecir si distintas especies de anfibios están presentes en los cuerpos de agua cercanos a estas vías.</p>
+      <p class="card-body">Las variables incluyen características físicas del entorno (tipo de suelo, pendiente, materia orgánica), variables de uso del suelo (forestal, urbano), distancias a carreteras y presencia de otras especies anfibias que actúan como bioindicadores.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">⚙️ Especificaciones</h3>
+      <table class="spec-table">
+        <tr><td>Fuente</td><td>UCI Repository</td></tr>
+        <tr><td>Registros</td><td>189</td></tr>
+        <tr><td>Variables</td><td>22 (+ 1 one-hot)</td></tr>
+        <tr><td>Target</td><td>Tree frog (0/1)</td></tr>
+        <tr><td>Tarea</td><td><span class="chip chip-moss">Clasificación binaria</span></td></tr>
+        <tr><td>Escalado</td><td>StandardScaler</td></tr>
+        <tr><td>Split</td><td>70% train / 30% test</td></tr>
+        <tr><td>Random state</td><td>52 (fijo)</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card-grid-3" style="margin-top:1.25rem;">
+    <div class="card"><div class="card-icon">🛣️</div><h3 class="card-title">Infraestructura Vial</h3><p class="card-body">Variables relacionadas con el tipo y características de la carretera: motorway, SR (distancia), NR (número de carreteras), TR (tráfico), VR (velocidad).</p></div>
+    <div class="card"><div class="card-icon">🌱</div><h3 class="card-title">Características del Suelo</h3><p class="card-body">Tipos de suelo (SUR1, SUR2, SUR3), materia orgánica (OR), pendiente (RR), clase de carretera (CR) y microhábitat (MR).</p></div>
+    <div class="card"><div class="card-icon">💧</div><h3 class="card-title">Entorno Acuático</h3><p class="card-body">Distancia a cuerpos de agua (BR), uso forestal (FR), uso urbano (UR) y presencia de otras especies bioindicadoras.</p></div>
+  </div>
+</section>
+
+<!-- ESPECIES -->
+<section id="especies" class="fade-in">
+  <div class="sec-label">03 · Especies</div>
+  <h2 class="sec-title">Anfibios del Dataset</h2>
+  <p class="sec-desc">Las 7 especies de anfibios presentes en el dataset, usadas como variables bioindicadoras del ecosistema.</p>
+  <div class="species-grid">
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🐸</span><div class="sp-name">Rana Arborícola</div><div class="sp-latin">Hyla arborea</div></div>
+      <div class="sp-body"><strong>🎯 Variable objetivo</strong> — Se predice su presencia/ausencia. Habita en zonas de vegetación densa cerca de cuerpos de agua.<div><span class="sp-status sp-nt">⚠️ Casi amenazada</span></div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🟢</span><div class="sp-name">Rana Verde</div><div class="sp-latin">Pelophylax esculentus</div></div>
+      <div class="sp-body">Variable bioindicadora. Su presencia sugiere ecosistemas acuáticos saludables y buena calidad del agua circundante.<div><span class="sp-status sp-lc">✓ Preocupación menor</span></div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🟤</span><div class="sp-name">Rana Parda</div><div class="sp-latin">Rana temporaria</div></div>
+      <div class="sp-body">Especie generalista, habita en praderas y bosques. Indicador de baja fragmentación del hábitat y conectividad ecológica.<div><span class="sp-status sp-lc">✓ Preocupación menor</span></div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🐢</span><div class="sp-name">Sapo Común</div><div class="sp-latin">Bufo bufo</div></div>
+      <div class="sp-body">Alta adaptabilidad. Indicador robusto de la calidad general del ecosistema terrestre y resistencia a perturbaciones humanas.<div><span class="sp-status sp-lc">✓ Preocupación menor</span></div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🔴</span><div class="sp-name">Sapo de Fuego</div><div class="sp-latin">Bombina bombina</div></div>
+      <div class="sp-body">Habita en aguas superficiales estancadas. Muy sensible a la fragmentación por carreteras y actividad humana.<div><span class="sp-status sp-vu">⚠️ Vulnerable</span></div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-header"><span class="sp-emoji">🦎</span><div class="sp-name">Tritón Crestado</div><div class="sp-latin">Triturus cristatus</div></div>
+      <div class="sp-body">Especie prioritaria de conservación en Europa. Requiere estanques limpios y zonas terrestres con alta cobertura vegetal.<div><span class="sp-status sp-vu">⚠️ Vulnerable</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTADOS -->
+<section id="resultados" class="fade-in">
+  <div class="sec-label">04 · Resultados</div>
+  <h2 class="sec-title">Rendimiento de los Modelos</h2>
+  <p class="sec-desc">Evaluación comparativa de la Red Neuronal y la Regresión Logística sobre el conjunto de prueba (30%, random_state=52).</p>
+  <div class="metrics-hero">
+    <div class="metric-box"><div class="val" style="color:var(--moss)">80.7%</div><div class="lbl">MLP Accuracy</div></div>
+    <div class="metric-box"><div class="val" style="color:var(--moss)">74.4%</div><div class="lbl">MLP F1-Score</div></div>
+    <div class="metric-box"><div class="val" style="color:var(--water)">77.2%</div><div class="lbl">LR Accuracy</div></div>
+    <div class="metric-box"><div class="val" style="color:var(--water)">66.7%</div><div class="lbl">LR F1-Score</div></div>
+  </div>
+  <div class="card-grid-2">
+    <div class="card">
+      <h3 class="card-title" style="color:var(--moss)">🧠 Red Neuronal (MLP)</h3>
+      <p style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem;">MLPClassifier · hidden_layers=(8,) · adam · max_iter=15000</p>
+      <div class="metric-row">
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Accuracy</span><span class="mrow-val" style="color:var(--moss)">80.7%</span></div><div class="mbar"><div class="mfill fill-moss" data-w="80.7"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Precision</span><span class="mrow-val" style="color:var(--moss)">69.6%</span></div><div class="mbar"><div class="mfill fill-moss" data-w="69.6"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Recall</span><span class="mrow-val" style="color:var(--moss)">80.0%</span></div><div class="mbar"><div class="mfill fill-moss" data-w="80.0"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">F1-Score</span><span class="mrow-val" style="color:var(--moss)">74.4%</span></div><div class="mbar"><div class="mfill fill-moss" data-w="74.4"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="card-title" style="color:var(--water)">📐 Regresión Logística</h3>
+      <p style="font-size:.78rem;color:var(--text-light);margin-bottom:1rem;">LogisticRegression · max_iter=1000 · C=500</p>
+      <div class="metric-row">
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Accuracy</span><span class="mrow-val" style="color:var(--water)">77.2%</span></div><div class="mbar"><div class="mfill fill-water" data-w="77.2"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Precision</span><span class="mrow-val" style="color:var(--water)">68.4%</span></div><div class="mbar"><div class="mfill fill-water" data-w="68.4"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">Recall</span><span class="mrow-val" style="color:var(--water)">65.0%</span></div><div class="mbar"><div class="mfill fill-water" data-w="65.0"></div></div></div>
+        <div class="mrow"><div class="mrow-header"><span class="mrow-name">F1-Score</span><span class="mrow-val" style="color:var(--water)">66.7%</span></div><div class="mbar"><div class="mfill fill-water" data-w="66.7"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1.25rem;">
+    <h3 class="card-title">📊 Comparación Visual</h3>
+    <div style="height:220px;margin-top:1rem;"><canvas id="metricsChart"></canvas></div>
+  </div>
+</section>
+
+<!-- PREDICCIÓN -->
+<section id="prediccion" class="fade-in">
+  <div class="sec-label">05 · Predicción</div>
+  <h2 class="sec-title">Analizador de Hábitat</h2>
+  <p class="sec-desc">Ingresa las características ecológicas del entorno para predecir la presencia de rana arborícola.</p>
+  <div class="tab-nav">
+    <button class="tnav active" onclick="switchTab('ind',this)">🔬 Análisis Individual</button>
+    <button class="tnav" onclick="switchTab('lot',this)">📂 Análisis por Lotes (CSV)</button>
+  </div>
+
+  <!-- INDIVIDUAL -->
+  <div class="tab-pane active" id="tab-ind">
+    <div class="predictor-layout">
+      <div class="eco-form">
+        <div class="model-select">
+          <button class="msel active" id="btn-nn" onclick="selModel('nn')">🧠 Red Neuronal</button>
+          <button class="msel" id="btn-lr" onclick="selModel('lr')">📐 Reg. Logística</button>
+        </div>
+        <div class="form-scroll">
+          <!-- HÁBITAT -->
+          <div class="form-section">
+            <div class="fsec-header"><span class="fsec-icon">🛣️</span><span class="fsec-title">Información del Hábitat</span></div>
+            <div class="form-grid">
+              <div class="ff"><label>🛤️ Tipo de carretera <span class="tip" title="A1=autopista, S52=vía expressa">ⓘ</span></label><select id="f_motorway"><option value="A1">A1 — Autopista</option><option value="S52">S52 — Vía expressa</option></select></div>
+              <div class="ff"><label>🆔 ID de muestra <span class="tip" title="Identificador del punto de muestreo">ⓘ</span></label><input type="number" id="f_id" value="1" min="1"></div>
+              <div class="ff"><label>📏 SR – Distancia carretera (m) <span class="tip" title="Distancia en metros al cuerpo de agua">ⓘ</span></label><input type="number" id="f_sr" value="500" step="100"></div>
+              <div class="ff"><label>🔢 NR – N° de carreteras <span class="tip" title="Número de carreteras en la zona">ⓘ</span></label><input type="number" id="f_nr" value="1" min="0"></div>
+              <div class="ff"><label>🚗 TR – Tráfico (clase) <span class="tip" title="Clase de tráfico promedio diario">ⓘ</span></label><input type="number" id="f_tr" value="5" min="0"></div>
+              <div class="ff"><label>💨 VR – Velocidad (km/h) <span class="tip" title="Límite de velocidad en la carretera">ⓘ</span></label><input type="number" id="f_vr" value="2" min="0"></div>
+            </div>
+          </div>
+          <!-- CONDICIONES -->
+          <div class="form-section">
+            <div class="fsec-header"><span class="fsec-icon">🌱</span><span class="fsec-title">Condiciones Ambientales</span></div>
+            <div class="form-grid">
+              <div class="ff"><label>🪨 SUR1 – Suelo tipo 1 <span class="tip" title="Cobertura del tipo de suelo predominante">ⓘ</span></label><input type="number" id="f_sur1" value="6" min="0"></div>
+              <div class="ff"><label>🏔️ SUR2 – Suelo tipo 2 <span class="tip" title="Cobertura del segundo tipo de suelo">ⓘ</span></label><input type="number" id="f_sur2" value="2" min="0"></div>
+              <div class="ff"><label>🌾 SUR3 – Suelo tipo 3 <span class="tip" title="Cobertura del tercer tipo de suelo">ⓘ</span></label><input type="number" id="f_sur3" value="10" min="0"></div>
+              <div class="ff"><label>🌿 OR – Materia orgánica (%) <span class="tip" title="Porcentaje de materia orgánica en suelo">ⓘ</span></label><input type="number" id="f_or" value="50" min="0" max="100"></div>
+              <div class="ff"><label>🏙️ UR – Uso urbano <span class="tip" title="Nivel de urbanización en la zona">ⓘ</span></label><input type="number" id="f_ur" value="0" min="0"></div>
+              <div class="ff"><label>🌲 FR – Uso forestal <span class="tip" title="Cobertura forestal en el área">ⓘ</span></label><input type="number" id="f_fr" value="0" min="0"></div>
+            </div>
+          </div>
+          <!-- ENTORNO NATURAL -->
+          <div class="form-section">
+            <div class="fsec-header"><span class="fsec-icon">💧</span><span class="fsec-title">Entorno Natural</span></div>
+            <div class="form-grid">
+              <div class="ff"><label>💧 BR – Dist. cuerpo de agua <span class="tip" title="Distancia al cuerpo de agua más próximo">ⓘ</span></label><input type="number" id="f_br" value="0" min="0"></div>
+              <div class="ff"><label>⛰️ RR – Pendiente (%) <span class="tip" title="Pendiente del terreno en la zona">ⓘ</span></label><input type="number" id="f_rr" value="0" min="0"></div>
+              <div class="ff"><label>🏞️ MR – Microhábitat <span class="tip" title="Tipo de microhábitat disponible">ⓘ</span></label><input type="number" id="f_mr" value="0" min="0"></div>
+              <div class="ff"><label>🛤️ CR – Clase carretera <span class="tip" title="Clasificación de la carretera 1-2">ⓘ</span></label><input type="number" id="f_cr" value="1" min="1" max="2"></div>
+            </div>
+          </div>
+          <!-- OTRAS ESPECIES -->
+          <div class="form-section">
+            <div class="fsec-header"><span class="fsec-icon">🦎</span><span class="fsec-title">Otras Especies Presentes</span></div>
+            <div class="species-checks">
+              <label class="scheck"><input type="checkbox" id="f_gf"><label for="f_gf">🟢 Ranas verdes</label></label>
+              <label class="scheck"><input type="checkbox" id="f_bf"><label for="f_bf">🟤 Ranas pardas</label></label>
+              <label class="scheck"><input type="checkbox" id="f_ct"><label for="f_ct">🐢 Sapo común</label></label>
+              <label class="scheck"><input type="checkbox" id="f_fbt"><label for="f_fbt">🔴 Sapo de fuego</label></label>
+              <label class="scheck"><input type="checkbox" id="f_cn"><label for="f_cn">🦎 Tritón común</label></label>
+              <label class="scheck"><input type="checkbox" id="f_gcn"><label for="f_gcn">🟣 Tritón crestado</label></label>
+            </div>
+          </div>
+        </div>
+        <button class="predict-btn" onclick="predictInd()">🐸 Predecir Presencia de Anfibios</button>
+      </div>
+
+      <!-- RESULT PANEL -->
+      <div>
+        <div class="result-panel" id="result-panel">
+          <div class="result-empty" id="res-empty">
+            <span class="big">🌿</span>
+            Completa el formulario ecológico y presiona<br><strong>Predecir Presencia de Anfibios</strong><br>para analizar el hábitat.
+          </div>
+          <div id="res-content" style="display:none">
+            <div class="result-verdict" id="res-verdict">
+              <span class="verdict-frog" id="res-emoji">🐸</span>
+              <div class="verdict-label" id="res-label">—</div>
+              <div class="verdict-sub">Tree frog en el hábitat analizado</div>
+              <div class="verdict-conf" id="res-conf">—</div>
+            </div>
+            <div class="interp-box" id="res-interp">—</div>
+            <div style="font-size:.78rem;color:var(--text-light);margin-bottom:.5rem;font-weight:600;">Probabilidades del modelo</div>
+            <div class="prob-chart-wrap"><canvas id="probChart"></canvas></div>
+            <div style="margin-top:1rem;font-size:.75rem;color:var(--text-light);text-align:center;" id="res-model-tag">—</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- INTRODUCCIÓN -->
-  <section id="intro" class="fade-in">
-    <div class="sec-hdr">
-      <span class="sec-icon">🧠</span>
-      <span class="sec-title">Introducción</span>
-      <span class="sec-num">01</span>
+  <!-- LOTES -->
+  <div class="tab-pane" id="tab-lot">
+    <div class="batch-layout">
+      <div class="upload-area">
+        <div class="model-select" style="margin-bottom:1.25rem;">
+          <button class="msel active" id="btn-nn-b" onclick="selModelBatch('nn')">🧠 Red Neuronal</button>
+          <button class="msel" id="btn-lr-b" onclick="selModelBatch('lr')">📐 Reg. Logística</button>
+        </div>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" accept=".csv" id="csv-file" onchange="handleCSV(this)">
+          <span class="upload-icon-big">📂</span>
+          <div class="upload-text">Arrastra tu dataset.csv</div>
+          <div class="upload-sub">o haz clic para seleccionar</div>
+          <div class="upload-ok" id="upload-ok"></div>
+        </div>
+        <div class="fmt-note">📋 Formato: CSV separado por <strong>;</strong> — estructura UCI Amphibians (encabezado en fila 2). Incluye columna <strong>Tree frog</strong> para calcular métricas.</div>
+        <button class="predict-btn" style="margin-top:1.25rem;" onclick="predictBatch()">🌿 Analizar Lote + Matriz de Confusión</button>
+      </div>
+      <div class="batch-results-area">
+        <div class="batch-placeholder" id="batch-empty"><span class="big">🌍</span>Carga un CSV y presiona<br><strong>Analizar Lote</strong> para ver resultados.</div>
+        <div id="batch-table-wrap" style="display:none">
+          <div style="font-size:.82rem;font-weight:600;color:var(--text-mid);margin-bottom:.75rem;" id="batch-summary"></div>
+          <div class="results-table-wrap" id="batch-table-cont"></div>
+        </div>
+      </div>
     </div>
-    <div class="intro-grid">
+    <div id="cm-section" style="display:none;margin-top:2rem;">
       <div class="card">
-        <h3><span class="badge badge-blue">PROBLEMA</span></h3>
-        <p>
-          El dataset <strong style="color:var(--white)">Amphibians (UCI)</strong> recoge mediciones
-          ecológicas y de infraestructura vial en Polonia para determinar la presencia de anfibios
-          en zonas de riesgo. El objetivo es predecir si la
-          <strong style="color:var(--green)">rana arborícola (Tree frog)</strong> está presente (1) o ausente (0).
-        </p>
-        <p style="margin-top:.75rem">
-          Se entrenaron una <strong style="color:var(--cyan)">Red Neuronal (MLP)</strong>
-          y una <strong style="color:var(--green)">Regresión Logística</strong> con 22 variables
-          de entrada, escalado con <code>StandardScaler</code> y encoding one-hot de la carretera.
-        </p>
-      </div>
-      <div class="card">
-        <h3><span class="badge badge-cyan">ESPECIFICACIONES</span></h3>
-        <ul class="spec-list">
-          <li><span class="spec-key">Dataset</span><span class="spec-val">Amphibians — UCI</span></li>
-          <li><span class="spec-key">Registros</span><span class="spec-val">189</span></li>
-          <li><span class="spec-key">Variables entrada</span><span class="spec-val">22 (+ 1 one-hot)</span></li>
-          <li><span class="spec-key">Target</span><span class="spec-val">Tree frog (0 / 1)</span></li>
-          <li><span class="spec-key">Tarea</span><span class="spec-val">Clasificación binaria</span></li>
-          <li><span class="spec-key">Modelo A</span><span class="spec-val">MLPClassifier</span></li>
-          <li><span class="spec-key">Modelo B</span><span class="spec-val">LogisticRegression</span></li>
-          <li><span class="spec-key">Escalado</span><span class="spec-val">StandardScaler</span></li>
-        </ul>
+        <h3 class="card-title">📊 Análisis del Lote</h3>
+        <div class="metrics-badges" id="batch-badges"></div>
+        <div class="cm-grid">
+          <div>
+            <div style="font-size:.8rem;font-weight:600;color:var(--text-mid);margin-bottom:1rem;">Matriz de Confusión — Filas: Real · Columnas: Predicho</div>
+            <div id="cm-cont"></div>
+          </div>
+          <div>
+            <div style="font-size:.8rem;font-weight:600;color:var(--text-mid);margin-bottom:1rem;">Distribución de Predicciones</div>
+            <div style="height:200px;"><canvas id="batchChart"></canvas></div>
+          </div>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- RESULTADOS -->
-  <section id="resultados" class="fade-in">
-    <div class="sec-hdr">
-      <span class="sec-icon">📈</span>
-      <span class="sec-title">Resultados</span>
-      <span class="sec-num">02</span>
-    </div>
-    <div class="results-grid">
-      <div class="card">
-        <h3><span class="badge badge-cyan">RED NEURONAL (MLP)</span></h3>
-        <div class="metric-row">
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--cyan)">94.2%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="94.2"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--cyan)">94.1%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="94.1"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--cyan)">90.1%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="90.1"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--cyan)">92.1%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-blue" data-width="92.1"></div></div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <h3><span class="badge badge-green">REG. LOGÍSTICA</span></h3>
-        <div class="metric-row">
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">ACCURACY</span><span class="metric-value" style="color:var(--green)">77.8%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="77.8"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">PRECISION</span><span class="metric-value" style="color:var(--green)">73.0%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="73.0"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">RECALL</span><span class="metric-value" style="color:var(--green)">64.8%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="64.8"></div></div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-header"><span class="metric-name">F1-SCORE</span><span class="metric-value" style="color:var(--green)">68.7%</span></div>
-            <div class="metric-bar"><div class="metric-fill fill-green" data-width="68.7"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:1rem">
-      <h3>Comparación Visual de Métricas</h3>
-      <div class="chart-wrapper"><canvas id="metricsChart"></canvas></div>
-    </div>
-  </section>
-
-  <!-- PREDICTOR -->
-  <section id="predictor" class="fade-in">
-    <div class="sec-hdr">
-      <span class="sec-icon">🖥️</span>
-      <span class="sec-title">Predictor Interactivo</span>
-      <span class="sec-num">03</span>
-    </div>
-
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('individual',this)">Predicción Individual</button>
-      <button class="tab-btn" onclick="switchTab('lotes',this)">Predicción por Lotes (CSV)</button>
-    </div>
-
-    <!-- INDIVIDUAL -->
-    <div class="tab-content active" id="tab-individual">
-      <div class="predictor-layout">
-        <div class="card form-section">
-          <h4>Seleccionar Modelo</h4>
-          <div class="model-toggle">
-            <div class="model-btn active" id="btn-nn" onclick="selectModel('nn')">🧠 Red Neuronal</div>
-            <div class="model-btn" id="btn-lr" onclick="selectModel('lr')">📐 Reg. Logística</div>
-          </div>
-          <h4>Variables de Entrada</h4>
-          <div class="form-section-scroll">
-          <div class="form-grid">
-            <div class="form-field"><label>Carretera (Motorway)</label><select id="f_motorway"><option value="A1">A1</option><option value="S52">S52</option></select></div>
-            <div class="form-field"><label>ID Muestra</label><input type="number" id="f_id" value="1" min="1"></div>
-            <div class="form-field"><label>SR – Dist. carretera (m)</label><input type="number" id="f_sr" value="500" step="100"></div>
-            <div class="form-field"><label>NR – Nº carreteras</label><input type="number" id="f_nr" value="1" min="0"></div>
-            <div class="form-field"><label>TR – Tráfico (veh/día)</label><input type="number" id="f_tr" value="5" min="0"></div>
-            <div class="form-field"><label>VR – Velocidad (km/h)</label><input type="number" id="f_vr" value="2" min="0"></div>
-            <div class="form-field"><label>SUR1 – Suelo tipo 1</label><input type="number" id="f_sur1" value="6" min="0"></div>
-            <div class="form-field"><label>SUR2 – Suelo tipo 2</label><input type="number" id="f_sur2" value="2" min="0"></div>
-            <div class="form-field"><label>SUR3 – Suelo tipo 3</label><input type="number" id="f_sur3" value="10" min="0"></div>
-            <div class="form-field"><label>UR – Uso urbano</label><input type="number" id="f_ur" value="0" min="0"></div>
-            <div class="form-field"><label>FR – Uso forestal</label><input type="number" id="f_fr" value="0" min="0"></div>
-            <div class="form-field"><label>OR – Org. materia (%)</label><input type="number" id="f_or" value="50" min="0" max="100"></div>
-            <div class="form-field"><label>RR – Pendiente (%)</label><input type="number" id="f_rr" value="0" min="0"></div>
-            <div class="form-field"><label>BR – Dist. cuerpo agua</label><input type="number" id="f_br" value="0" min="0"></div>
-            <div class="form-field"><label>MR – Microhábitat</label><input type="number" id="f_mr" value="0" min="0"></div>
-            <div class="form-field"><label>CR – Clase carretera</label><input type="number" id="f_cr" value="1" min="1" max="2"></div>
-            <div class="form-field"><label>Ranas verdes</label><select id="f_gf"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-            <div class="form-field"><label>Ranas pardas</label><select id="f_bf"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-            <div class="form-field"><label>Sapo común</label><select id="f_ct"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-            <div class="form-field"><label>Sapo de fuego</label><select id="f_fbt"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-            <div class="form-field"><label>Tritón común</label><select id="f_cn"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-            <div class="form-field"><label>Tritón crestado</label><select id="f_gcn"><option value="0">0 – Ausente</option><option value="1">1 – Presente</option></select></div>
-          </div>
-          </div>
-          <button class="predict-btn" onclick="predictIndividual()">⚡ PREDECIR</button>
-        </div>
-        <div>
-          <div class="card" style="margin-bottom:1rem">
-            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Resultado — Tree Frog</h4>
-            <div class="result-panel">
-              <div class="result-placeholder" id="ind-placeholder">Ingresa variables y presiona PREDECIR</div>
-              <div id="ind-result" style="display:none">
-                <div class="result-value" id="ind-class">—</div>
-                <div id="ind-label" style="font-family:var(--font-mono);font-size:.85rem;margin-top:.25rem;"></div>
-                <div class="result-confidence" id="ind-conf"></div>
-                <div id="ind-model-tag" style="margin-top:.5rem"></div>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Probabilidades (Ausente / Presente)</h4>
-            <div class="chart-wrapper" style="height:160px"><canvas id="probChart"></canvas></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- LOTES -->
-    <div class="tab-content" id="tab-lotes">
-      <div class="predictor-layout">
-        <div class="card form-section">
-          <h4>Seleccionar Modelo</h4>
-          <div class="model-toggle">
-            <div class="model-btn active" id="btn-nn-b" onclick="selectModelBatch('nn')">🧠 Red Neuronal</div>
-            <div class="model-btn" id="btn-lr-b" onclick="selectModelBatch('lr')">📐 Reg. Logística</div>
-          </div>
-          <h4>Cargar Dataset CSV</h4>
-          <div class="upload-zone" id="upload-zone">
-            <input type="file" accept=".csv" id="csv-file" onchange="handleCSV(this)">
-            <div class="upload-icon">📂</div>
-            <div class="upload-label">Arrastra tu <strong>dataset.csv</strong> aquí</div>
-            <div class="upload-sub">o haz clic para seleccionar el archivo</div>
-            <div class="upload-ok" id="upload-ok">✅ Archivo cargado correctamente</div>
-          </div>
-          <div style="margin-top:.75rem;padding:.6rem .75rem;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.15);border-radius:6px;font-family:var(--font-mono);font-size:.65rem;color:var(--muted);">
-            Formato: CSV con separador <strong>;</strong> — columnas del dataset original UCI (con encabezado en fila 2).<br>
-            Columna <strong>Tree frog</strong> opcional para calcular métricas.
-          </div>
-          <button class="predict-btn" onclick="predictBatch()">⚡ PREDECIR LOTE + MATRIZ</button>
-        </div>
-        <div id="batch-right">
-          <div class="card" style="margin-bottom:1rem">
-            <h4 style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem">Resultados del Lote</h4>
-            <div id="batch-results-container">
-              <div class="result-placeholder" style="padding:2rem 0">Carga un CSV y presiona PREDECIR LOTE</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="cm-section" style="display:none;margin-top:1.5rem;">
-        <div class="card">
-          <h3>📊 Métricas del Lote</h3>
-          <div class="metrics-row-2" id="batch-metrics-badges"></div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;">
-            <div>
-              <h4 style="font-family:var(--font-mono);font-size:.7rem;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;">Matriz de Confusión</h4>
-              <p style="font-family:var(--font-mono);font-size:.62rem;color:var(--muted);margin-bottom:.75rem;">Filas = Real &nbsp;|&nbsp; Columnas = Predicho</p>
-              <div class="cm-container" id="cm-table-container"></div>
-            </div>
-            <div>
-              <h4 style="font-family:var(--font-mono);font-size:.7rem;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem;">Distribución de Predicciones</h4>
-              <div style="height:200px;"><canvas id="batchChart"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<!-- EDUCACIÓN -->
+<section id="acerca" class="fade-in">
+  <div class="sec-label">06 · Acerca del Proyecto</div>
+  <h2 class="sec-title">¿Por qué los Anfibios importan?</h2>
+  <p class="sec-desc">La inteligencia artificial como herramienta de conservación y monitoreo ecológico.</p>
+  <div class="edu-grid">
+    <div class="edu-card"><span class="edu-icon">🐸</span><div class="edu-title">¿Qué son los Anfibios?</div><p class="edu-body">Los anfibios son vertebrados ectotérmicos que viven en la interfaz entre ambientes acuáticos y terrestres. Incluyen ranas, sapos, salamandras y cecilias. Son altamente sensibles a cambios ambientales, convirtiéndolos en excelentes bioindicadores del estado de los ecosistemas.</p></div>
+    <div class="edu-card water"><span class="edu-icon">🌍</span><div class="edu-title">Importancia Ecológica</div><p class="edu-body">Regulan poblaciones de insectos, forman parte de cadenas alimentarias y contribuyen al ciclo de nutrientes. Su declive —documentado en más del 40% de las especies globalmente— es una señal de alerta temprana para la salud de los ecosistemas.</p></div>
+    <div class="edu-card earth"><span class="edu-icon">🔬</span><div class="edu-title">El Dataset UCI</div><p class="edu-body">Recopilado en tramos de carretera en Polonia, registra presencia/ausencia de 7 especies anfibias junto con variables ecológicas. Permite estudiar cómo la infraestructura vial fragmenta hábitats y reduce la conectividad para las poblaciones de anfibios.</p></div>
+    <div class="edu-card gold"><span class="edu-icon">🤖</span><div class="edu-title">IA para la Conservación</div><p class="edu-body">Los modelos de Machine Learning permiten analizar grandes volúmenes de datos ecológicos para identificar patrones de presencia de especies. Esta plataforma demuestra cómo la IA puede apoyar decisiones de planificación ambiental y conservación.</p></div>
+    <div class="edu-card"><span class="edu-icon">🧠</span><div class="edu-title">Red Neuronal (MLP)</div><p class="edu-body">El MLPClassifier captura relaciones no lineales complejas entre variables ecológicas. Con una capa oculta de 8 neuronas y el optimizador Adam, alcanzó un <strong>80.7% de accuracy</strong>, superando al modelo lineal en este conjunto de datos.</p></div>
+    <div class="edu-card water"><span class="edu-icon">📐</span><div class="edu-title">Regresión Logística</div><p class="edu-body">Modelo interpretable que asigna pesos a cada variable ecológica. Con <strong>77.2% de accuracy</strong>, permite entender qué variables —distancia al agua, materia orgánica, uso forestal— son más determinantes para la presencia de anfibios.</p></div>
+  </div>
+</section>
 
 </main>
-
 <footer>
-  <span>Anfibios ML Dashboard</span> — Proyecto Final Individual — Entrega 11-MAY-2026 — UCI Amphibians Dataset
+  <strong>AmphibiaML</strong> — Plataforma de Monitoreo Ecológico basada en Inteligencia Artificial<br>
+  <span style="margin-top:.4rem;display:block;">Proyecto Final Individual · Entrega 11-MAY-2026 · UCI Amphibians Dataset</span>
 </footer>
 </div>
 
 <script>
-// ==============================
-//  ESTADO GLOBAL
-// ==============================
-let selModel = 'nn', selModelBatch = 'nn';
-let probChart = null, batchChart = null, metricsChart = null;
-let csvData = null;
+let currentModel='nn', currentModelBatch='nn';
+let probChartInst=null, batchChartInst=null, metricsChartInst=null;
+let csvData=null;
 
-const CATS   = ['0','1'];
-const LABELS = { '0': 'Ausente', '1': 'Presente' };
-const CAT_COLORS = { '0': '#ffd54f', '1': '#00e676' };
-
-// ==============================
-//  LOGIN / LOGOUT
-// ==============================
-function doLogin() {
-  const u = document.getElementById('l-user').value.trim();
-  const p = document.getElementById('l-pass').value.trim();
-  const e = document.getElementById('l-err');
-  if (!u || !p) { e.textContent = 'Completa todos los campos.'; return; }
-  if (u === 'admin' && p === 'covid2026') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    e.textContent = '';
-    setTimeout(() => { animateBars(); initMetricsChart(); }, 400);
-    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-    checkAPI();
-  } else {
-    e.textContent = 'Usuario o contraseña incorrectos.';
-    document.getElementById('l-pass').value = '';
-  }
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value.trim();
+  const e=document.getElementById('l-err');
+  if(!u||!p){e.textContent='Completa todos los campos.';return;}
+  if(u==='admin'&&p==='anfibios2026'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    e.textContent='';
+    setTimeout(()=>{animateBars();initMetrics();},400);
+    initObserver(); checkBackend();
+  } else {e.textContent='Usuario o contraseña incorrectos.';document.getElementById('l-pass').value='';}
 }
-
-function doLogout() {
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('l-user').value = '';
-  document.getElementById('l-pass').value = '';
+function doLogout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-user').value='';document.getElementById('l-pass').value='';
 }
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doLogin();
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();
 });
 
-// ==============================
-//  API BACKEND (Render)
-// ==============================
-const API_URL = 'https://amphibians-backend.onrender.com';
+const API='https://amphibians-backend.onrender.com';
 
-async function checkAPI() {
-  const pill = document.getElementById('status-pill');
-  try {
-    const res = await fetch(`${API_URL}/`, { signal: AbortSignal.timeout(10000) });
-    if (res.ok) {
-      pill.style.color = 'var(--green)';
-      pill.style.borderColor = 'rgba(0,230,118,.25)';
-      pill.style.background  = 'rgba(0,230,118,.08)';
-      pill.textContent = 'BACKEND ACTIVO';
-    } else throw new Error();
-  } catch {
-    pill.style.color = 'var(--danger)';
-    pill.style.borderColor = 'rgba(255,75,110,.25)';
-    pill.style.background  = 'rgba(255,75,110,.08)';
-    pill.textContent = 'BACKEND INACTIVO';
-  }
+async function checkBackend(){
+  const badge=document.getElementById('status-badge');
+  const text=document.getElementById('status-text');
+  try{
+    const r=await fetch(`${API}/`,{signal:AbortSignal.timeout(10000)});
+    if(r.ok){badge.style.cssText='background:rgba(106,170,114,.12);border-color:rgba(106,170,114,.3);color:var(--moss);';text.textContent='Backend activo';}
+    else throw 0;
+  }catch{badge.style.cssText='background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.2);color:var(--danger);';text.textContent='Backend inactivo';document.querySelector('.status-dot').style.background='var(--danger)';}
 }
 
-// Construye el payload a partir de los campos del formulario o un objeto row
-function buildPayload(source) {
-  // source puede ser 'form' (leer del DOM) o un objeto con los valores
-  const g = id => {
-    const el = document.getElementById(id);
-    return el ? el.value : '0';
-  };
-  if (source === 'form') {
-    return {
-      Motorway: g('f_motorway'),
-      ID:   parseFloat(g('f_id')),
-      SR:   parseFloat(g('f_sr')),
-      NR:   parseFloat(g('f_nr')),
-      TR:   parseFloat(g('f_tr')),
-      VR:   parseFloat(g('f_vr')),
-      SUR1: parseFloat(g('f_sur1')),
-      SUR2: parseFloat(g('f_sur2')),
-      SUR3: parseFloat(g('f_sur3')),
-      UR:   parseFloat(g('f_ur')),
-      FR:   parseFloat(g('f_fr')),
-      OR:   parseFloat(g('f_or')),
-      RR:   parseFloat(g('f_rr')),
-      BR:   parseFloat(g('f_br')),
-      MR:   parseFloat(g('f_mr')),
-      CR:   parseFloat(g('f_cr')),
-      'Green frogs':        parseFloat(g('f_gf')),
-      'Brown frogs':        parseFloat(g('f_bf')),
-      'Common toad':        parseFloat(g('f_ct')),
-      'Fire-bellied toad':  parseFloat(g('f_fbt')),
-      'Common newt':        parseFloat(g('f_cn')),
-      'Great crested newt': parseFloat(g('f_gcn'))
-    };
-  }
-  return source; // ya es un objeto row del CSV
-}
-
-async function callAPI(payload, modelType) {
-  const endpoint = modelType === 'nn' ? '/predict/nn' : '/predict/lr';
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
-  const data = await res.json();
-  // { prediction: 0|1, label: 'Ausente'|'Presente', probabilities: {'0':p,'1':p}, confidence: N }
-  return {
-    cat:   String(data.prediction),
-    label: data.label,
-    probs: [data.probabilities['0'] ?? 0, data.probabilities['1'] ?? 0]
+function buildPayload(){
+  return{
+    Motorway:document.getElementById('f_motorway').value,
+    ID:+document.getElementById('f_id').value,
+    SR:+document.getElementById('f_sr').value,NR:+document.getElementById('f_nr').value,
+    TR:+document.getElementById('f_tr').value,VR:+document.getElementById('f_vr').value,
+    SUR1:+document.getElementById('f_sur1').value,SUR2:+document.getElementById('f_sur2').value,
+    SUR3:+document.getElementById('f_sur3').value,UR:+document.getElementById('f_ur').value,
+    FR:+document.getElementById('f_fr').value,OR:+document.getElementById('f_or').value,
+    RR:+document.getElementById('f_rr').value,BR:+document.getElementById('f_br').value,
+    MR:+document.getElementById('f_mr').value,CR:+document.getElementById('f_cr').value,
+    'Green frogs':document.getElementById('f_gf').checked?1:0,
+    'Brown frogs':document.getElementById('f_bf').checked?1:0,
+    'Common toad':document.getElementById('f_ct').checked?1:0,
+    'Fire-bellied toad':document.getElementById('f_fbt').checked?1:0,
+    'Common newt':document.getElementById('f_cn').checked?1:0,
+    'Great crested newt':document.getElementById('f_gcn').checked?1:0
   };
 }
 
-async function callBatchAPI(rows, modelType) {
-  const res = await fetch(`${API_URL}/predict/batch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: modelType, rows })
-  });
-  if (!res.ok) throw new Error(`Error del servidor: ${res.status}`);
-  const data = await res.json();
-  return data.predictions.map(p => ({
-    cat:   String(p.prediction),
-    label: p.label,
-    probs: [p.probabilities['0'] ?? 0, p.probabilities['1'] ?? 0]
-  }));
+async function apiCall(payload,modelType){
+  const ep=modelType==='nn'?'/predict/nn':'/predict/lr';
+  const r=await fetch(`${API}${ep}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!r.ok)throw new Error(`HTTP ${r.status}`);
+  const d=await r.json();
+  return{pred:String(d.prediction),label:d.label,conf:d.confidence,probs:[d.probabilities['0']??0,d.probabilities['1']??0]};
 }
 
-// ==============================
-//  SELECCIÓN DE MODELO
-// ==============================
-function selectModel(m) {
-  selModel = m;
-  document.getElementById('btn-nn').classList.toggle('active', m === 'nn');
-  document.getElementById('btn-lr').classList.toggle('active', m === 'lr');
-  document.getElementById('ind-placeholder').style.display = 'block';
-  document.getElementById('ind-placeholder').textContent = 'Ingresa variables y presiona PREDECIR';
-  document.getElementById('ind-result').style.display = 'none';
+async function apiBatch(rows,modelType){
+  const r=await fetch(`${API}/predict/batch`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:modelType,rows})});
+  if(!r.ok)throw new Error(`HTTP ${r.status}`);
+  const d=await r.json();
+  return d.predictions.map(p=>({pred:String(p.prediction),label:p.label,conf:p.confidence,probs:[p.probabilities['0']??0,p.probabilities['1']??0]}));
 }
 
-function selectModelBatch(m) {
-  selModelBatch = m;
-  document.getElementById('btn-nn-b').classList.toggle('active', m === 'nn');
-  document.getElementById('btn-lr-b').classList.toggle('active', m === 'lr');
-}
-
-// ==============================
-//  PREDICCIÓN INDIVIDUAL
-// ==============================
-async function predictIndividual() {
-  const payload = buildPayload('form');
-  const btn = document.querySelector('#tab-individual .predict-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Consultando modelo...';
-  document.getElementById('ind-placeholder').style.display = 'block';
-  document.getElementById('ind-placeholder').textContent = 'Consultando backend...';
-  document.getElementById('ind-result').style.display = 'none';
-
-  let result;
-  try {
-    result = await callAPI(payload, selModel);
-  } catch (err) {
-    document.getElementById('ind-placeholder').textContent = '⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.';
-    btn.disabled = false; btn.textContent = '⚡ PREDECIR';
-    console.error(err); return;
+function interpret(pred,payload){
+  const cerca=payload.BR<200, forestal=payload.FR>30, urbano=payload.UR>50, organico=payload.OR>30;
+  if(pred==='1'){
+    if(cerca&&forestal)return '🌿 El ecosistema presenta condiciones <strong>muy favorables</strong> para la presencia de rana arborícola, gracias a la cercanía a cuerpos de agua y alta cobertura forestal.';
+    if(cerca)return '💧 La proximidad a cuerpos de agua genera condiciones <strong>adecuadas</strong> para la presencia de anfibios en esta zona.';
+    if(organico)return '🌱 El alto contenido de materia orgánica del suelo favorece la <strong>presencia de anfibios</strong> en el área evaluada.';
+    return '🐸 Las condiciones generales del hábitat son <strong>favorables</strong> para la presencia de rana arborícola (<em>Hyla arborea</em>).';
+  }else{
+    if(urbano)return '🏙️ La <strong>urbanización cercana</strong> y la fragmentación del hábitat reducen significativamente la probabilidad de presencia de anfibios.';
+    if(!cerca)return '🏜️ La <strong>lejanía a cuerpos de agua</strong> limita el acceso a hábitats reproductivos para la rana arborícola.';
+    return '⚠️ Las condiciones actuales del hábitat presentan <strong>baja idoneidad</strong> para la presencia de rana arborícola en esta zona.';
   }
-  btn.disabled = false; btn.textContent = '⚡ PREDECIR';
+}
 
-  document.getElementById('ind-placeholder').style.display = 'none';
-  document.getElementById('ind-result').style.display = 'block';
+async function predictInd(){
+  const payload=buildPayload();
+  const btn=document.querySelector('#tab-ind .predict-btn');
+  btn.disabled=true;btn.innerHTML='⏳ Analizando hábitat...';
+  document.getElementById('res-empty').style.display='block';
+  document.getElementById('res-empty').textContent='Consultando modelo de IA...';
+  document.getElementById('res-content').style.display='none';
+  let r;
+  try{r=await apiCall(payload,currentModel);}
+  catch(err){document.getElementById('res-empty').textContent='⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.';btn.disabled=false;btn.innerHTML='🐸 Predecir Presencia de Anfibios';return;}
+  btn.disabled=false;btn.innerHTML='🐸 Predecir Presencia de Anfibios';
+  const isP=r.pred==='1';
+  document.getElementById('res-empty').style.display='none';
+  document.getElementById('res-content').style.display='block';
+  document.getElementById('res-emoji').textContent=isP?'🐸':'🌿';
+  document.getElementById('res-label').textContent=r.label;
+  document.getElementById('res-label').style.color=isP?'var(--moss)':'var(--earth)';
+  const confEl=document.getElementById('res-conf');
+  confEl.textContent=`Confianza: ${r.conf.toFixed(1)}%`;
+  confEl.className=`verdict-conf ${isP?'conf-present':'conf-absent'}`;
+  const interp=document.getElementById('res-interp');
+  interp.innerHTML=interpret(r.pred,payload);
+  interp.className=`interp-box${isP?'':' low'}`;
+  document.getElementById('res-model-tag').textContent=currentModel==='nn'?'🧠 Red Neuronal (MLP)':'📐 Regresión Logística';
+  const ctx=document.getElementById('probChart').getContext('2d');
+  if(probChartInst)probChartInst.destroy();
+  probChartInst=new Chart(ctx,{type:'bar',
+    data:{labels:['Ausente (0)','Presente (1)'],datasets:[{data:r.probs.map(p=>(p*100).toFixed(1)),
+      backgroundColor:['rgba(122,92,66,.25)','rgba(61,107,71,.25)'],
+      borderColor:['var(--earth)','var(--moss)'],borderWidth:2,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,max:100,ticks:{color:'var(--text-light)',font:{family:'DM Mono',size:10},callback:v=>v+'%'},grid:{color:'rgba(138,154,142,.15)'}},
+      x:{ticks:{color:'var(--text-light)',font:{family:'DM Sans',size:11}},grid:{display:false}}}}});
+}
 
-  const catEl = document.getElementById('ind-class');
-  catEl.textContent = result.cat;
-  catEl.style.color = CAT_COLORS[result.cat] || 'var(--white)';
-
-  document.getElementById('ind-label').textContent = result.label;
-  document.getElementById('ind-label').style.color = CAT_COLORS[result.cat] || 'var(--muted)';
-
-  const conf = (Math.max(...result.probs) * 100).toFixed(1);
-  document.getElementById('ind-conf').innerHTML = `Confianza: <span>${conf}%</span>`;
-
-  const mn = selModel === 'nn' ? '🧠 Red Neuronal' : '📐 Reg. Logística';
-  document.getElementById('ind-model-tag').innerHTML =
-    `<span class="badge ${selModel === 'nn' ? 'badge-cyan' : 'badge-green'}">${mn}</span>`;
-
-  const ctx = document.getElementById('probChart').getContext('2d');
-  if (probChart) probChart.destroy();
-  probChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Ausente (0)', 'Presente (1)'],
-      datasets: [{
-        data: result.probs.map(p => (p * 100).toFixed(1)),
-        backgroundColor: ['rgba(255,213,79,.6)', 'rgba(0,230,118,.6)'],
-        borderColor:      ['#ffd54f', '#00e676'],
-        borderWidth: 1, borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, max: 100,
-          ticks: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 }, callback: v => v + '%' },
-          grid: { color: 'rgba(26,58,110,.4)' }
-        },
-        x: { ticks: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 } }, grid: { display: false } }
-      }
+function handleCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
+    const sep=lines[0].includes(';')?';':',';
+    const header=(lines[1]||lines[0]).split(sep).map(h=>h.trim());
+    const start=lines[1]?2:1;
+    const idx={};header.forEach((h,i)=>idx[h]=i);
+    const COLS=['ID','Motorway','SR','NR','TR','VR','SUR1','SUR2','SUR3','UR','FR','OR','RR','BR','MR','CR',
+      'Green frogs','Brown frogs','Common toad','Fire-bellied toad','Common newt','Great crested newt'];
+    const rows=[];
+    for(let i=start;i<lines.length;i++){
+      const c=lines[i].split(sep).map(s=>s.trim());if(c.length<5)continue;
+      const row={};COLS.forEach(col=>{const x=idx[col];row[col]=x!==undefined?(isNaN(c[x])?c[x]:parseFloat(c[x])):0;});
+      rows.push({row,real:idx['Tree frog']!==undefined?String(parseInt(c[idx['Tree frog']])||0):null});
     }
-  });
+    csvData={rows};
+    const ok=document.getElementById('upload-ok');ok.style.display='block';ok.textContent=`✅ ${rows.length} registros cargados`;
+  };reader.readAsText(file);
 }
 
-// ==============================
-//  CARGA DE CSV
-// ==============================
-function handleCSV(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const text  = e.target.result;
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    // El CSV tiene separador ; y el header real está en línea 2 (índice 1)
-    const sep = lines[0].includes(';') ? ';' : ',';
-    const header = lines[1] ? lines[1].split(sep).map(h => h.trim()) : lines[0].split(sep).map(h => h.trim());
-    const dataStart = lines[1] ? 2 : 1;
+const uz=document.getElementById('upload-zone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){document.getElementById('csv-file').files=e.dataTransfer.files;handleCSV({files:e.dataTransfer.files});}});
 
-    const colMap = {};
-    header.forEach((h, i) => { colMap[h] = i; });
-
-    const COLS = ['ID','Motorway','SR','NR','TR','VR','SUR1','SUR2','SUR3','UR','FR','OR','RR','BR','MR','CR',
-                  'Green frogs','Brown frogs','Common toad','Fire-bellied toad','Common newt','Great crested newt'];
-
-    const rows = [];
-    for (let i = dataStart; i < lines.length; i++) {
-      const cols = lines[i].split(sep).map(c => c.trim());
-      if (cols.length < 5) continue;
-      const row = {};
-      COLS.forEach(col => {
-        const idx = colMap[col];
-        row[col] = idx !== undefined ? (isNaN(cols[idx]) ? cols[idx] : parseFloat(cols[idx])) : 0;
-      });
-      const tfIdx = colMap['Tree frog'];
-      const realLabel = tfIdx !== undefined ? String(parseInt(cols[tfIdx]) || 0) : null;
-      rows.push({ row, realLabel });
-    }
-    csvData = { rows };
-    const ok = document.getElementById('upload-ok');
-    ok.style.display = 'block';
-    ok.textContent = `✅ ${rows.length} registros cargados`;
-  };
-  reader.readAsText(file);
-}
-
-const uz = document.getElementById('upload-zone');
-uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
-uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
-uz.addEventListener('drop', e => {
-  e.preventDefault(); uz.classList.remove('drag');
-  const f = e.dataTransfer.files[0];
-  if (f) { document.getElementById('csv-file').files = e.dataTransfer.files; handleCSV({ files: e.dataTransfer.files }); }
-});
-
-// ==============================
-//  PREDICCIÓN POR LOTES
-// ==============================
-async function predictBatch() {
-  if (!csvData || !csvData.rows.length) { alert('Primero carga un archivo CSV.'); return; }
-
-  const btn = document.querySelector('#tab-lotes .predict-btn');
-  btn.disabled = true;
-  btn.textContent = `⏳ Procesando ${csvData.rows.length} registros...`;
-
+async function predictBatch(){
+  if(!csvData||!csvData.rows.length){alert('Primero carga un archivo CSV.');return;}
+  const btn=document.querySelector('#tab-lot .predict-btn');
+  btn.disabled=true;btn.innerHTML=`⏳ Analizando ${csvData.rows.length} muestras...`;
   let preds;
-  try {
-    preds = await callBatchAPI(csvData.rows.map(r => r.row), selModelBatch);
-  } catch (err) {
-    alert('⚠️ Error al conectar con el backend. Verifica que el servicio en Render esté activo.');
-    btn.disabled = false; btn.textContent = '⚡ PREDECIR LOTE + MATRIZ'; console.error(err); return;
+  try{preds=await apiBatch(csvData.rows.map(r=>r.row),currentModelBatch);}
+  catch(err){alert('⚠️ Error al conectar con el backend.');btn.disabled=false;btn.innerHTML='🌿 Analizar Lote + Matriz de Confusión';return;}
+  btn.disabled=false;btn.innerHTML='🌿 Analizar Lote + Matriz de Confusión';
+  const results=csvData.rows.map((r,i)=>({...r,pred:preds[i]}));
+  const hasReal=results.some(r=>r.real!==null);
+  let html=`<table class="eco-table"><thead><tr><th>#</th><th>ID</th><th>Predicción</th><th>Confianza</th>${hasReal?'<th>Real</th><th>✓</th>':''}</tr></thead><tbody>`;
+  results.forEach((r,i)=>{
+    const id=r.row['ID']||(i+1);const ok=hasReal&&r.pred.pred===r.real;
+    const wrongC=hasReal&&!ok?' wrong':'';const cls=r.pred.pred==='1'?'present':'absent';
+    html+=`<tr><td>${i+1}</td><td>${id}</td><td class="${cls}${wrongC}">${r.pred.label}</td><td>${r.pred.conf.toFixed(1)}%</td>${hasReal?`<td class="${r.pred.pred==='1'?'present':'absent'}">${r.real==='1'?'Presente':'Ausente'}</td><td class="${ok?'check-ok':'check-no'}">${ok?'✓':'✗'}</td>`:''}</tr>`;
+  });html+='</tbody></table>';
+  document.getElementById('batch-empty').style.display='none';
+  document.getElementById('batch-table-wrap').style.display='block';
+  document.getElementById('batch-summary').textContent=`${results.length} muestras analizadas — ${currentModelBatch==='nn'?'Red Neuronal':'Reg. Logística'}`;
+  document.getElementById('batch-table-cont').innerHTML=html;
+  if(hasReal){
+    const cm={'0':{'0':0,'1':0},'1':{'0':0,'1':0}};
+    results.forEach(r=>{if(r.real&&cm[r.real])cm[r.real][r.pred.pred]++;});
+    const total=results.filter(r=>r.real!==null).length;
+    const correct=results.filter(r=>r.real!==null&&r.pred.pred===r.real).length;
+    const acc=(correct/total*100).toFixed(1);
+    const tp=cm['1']['1'],fp=cm['0']['1'],fn=cm['1']['0'],tn=cm['0']['0'];
+    const prec=tp+fp>0?(tp/(tp+fp)*100).toFixed(1):'—';
+    const rec=tp+fn>0?(tp/(tp+fn)*100).toFixed(1):'—';
+    const f1=prec!=='—'&&rec!=='—'?(2*+prec*+rec/(+prec+ +rec)).toFixed(1):'—';
+    document.getElementById('batch-badges').innerHTML=`<div class="mbadge"><div class="val">${total}</div><div class="lbl">Muestras</div></div><div class="mbadge"><div class="val" style="color:var(--moss)">${acc}%</div><div class="lbl">Accuracy</div></div><div class="mbadge"><div class="val">${prec}%</div><div class="lbl">Precision</div></div><div class="mbadge"><div class="val">${f1}%</div><div class="lbl">F1-Score</div></div>`;
+    document.getElementById('cm-cont').innerHTML=`<table class="cm-table"><thead><tr><th></th><th style="color:var(--earth)">Pred. Ausente</th><th style="color:var(--moss)">Pred. Presente</th></tr></thead><tbody><tr><td class="cm-rowlabel" style="color:var(--earth)">Real Ausente</td><td class="cm-cell cm-tn">${tn}</td><td class="cm-cell cm-fp">${fp}</td></tr><tr><td class="cm-rowlabel" style="color:var(--moss)">Real Presente</td><td class="cm-cell cm-fn">${fn}</td><td class="cm-cell cm-tp">${tp}</td></tr></tbody></table>`;
+  }else{
+    const pres=results.filter(r=>r.pred.pred==='1').length,tot=results.length;
+    document.getElementById('batch-badges').innerHTML=`<div class="mbadge"><div class="val">${tot}</div><div class="lbl">Muestras</div></div><div class="mbadge"><div class="val" style="color:var(--moss)">${pres}</div><div class="lbl">Presentes</div></div><div class="mbadge"><div class="val" style="color:var(--earth)">${tot-pres}</div><div class="lbl">Ausentes</div></div><div class="mbadge"><div class="val">${(pres/tot*100).toFixed(1)}%</div><div class="lbl">% Presencia</div></div>`;
+    document.getElementById('cm-cont').innerHTML='<p style="font-size:.82rem;color:var(--text-light);padding:1rem 0;">Incluye la columna <strong>Tree frog</strong> en tu CSV para ver la matriz de confusión.</p>';
   }
-  btn.disabled = false; btn.textContent = '⚡ PREDECIR LOTE + MATRIZ';
-
-  const results = csvData.rows.map((r, i) => ({ ...r, pred: preds[i] }));
-  const hasReal = results.some(r => r.realLabel !== null);
-
-  // Tabla
-  let html = `<div class="batch-results"><table class="batch-table"><thead><tr>
-    <th>#</th><th>ID</th><th>Predicción</th><th>Confianza</th>${hasReal ? '<th>Real</th><th>✓</th>' : ''}
-  </tr></thead><tbody>`;
-  results.forEach((r, i) => {
-    const conf = (Math.max(...r.pred.probs) * 100).toFixed(1);
-    const cls  = r.pred.cat === '1' ? 'pred-presente' : 'pred-ausente';
-    const ok   = r.realLabel !== null && r.pred.cat === r.realLabel;
-    const wrongCls = hasReal && !ok ? ' pred-wrong' : '';
-    const rowId = r.row['ID'] || (i + 1);
-    html += `<tr>
-      <td>${i + 1}</td>
-      <td>${rowId}</td>
-      <td class="${cls}${wrongCls}">${r.pred.label}</td>
-      <td>${conf}%</td>
-      ${hasReal ? `<td style="color:${CAT_COLORS[r.realLabel]||'var(--muted)'}">${LABELS[r.realLabel]||'?'}</td>
-      <td>${ok ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--danger)">✗</span>'}</td>` : ''}
-    </tr>`;
-  });
-  html += '</tbody></table></div>';
-  document.getElementById('batch-results-container').innerHTML = html;
-
-  // Matriz de confusión (solo si hay labels reales)
-  if (hasReal) {
-    const cm = { '0':{'0':0,'1':0}, '1':{'0':0,'1':0} };
-    results.forEach(r => {
-      if (r.realLabel !== null && cm[r.realLabel]) cm[r.realLabel][r.pred.cat]++;
-    });
-    const LABELS_CM = ['0','1'];
-    let cmHtml = `<table class="cm-table"><thead><tr><th></th>`;
-    LABELS_CM.forEach(c => cmHtml += `<th class="cm-th-row" style="color:${CAT_COLORS[c]}">${LABELS[c]}<br><span style="font-size:.55rem;color:var(--muted)">(Pred)</span></th>`);
-    cmHtml += '</tr></thead><tbody>';
-    LABELS_CM.forEach(real => {
-      cmHtml += `<tr><td class="cm-label-cell"><span style="color:${CAT_COLORS[real]}">${LABELS[real]}</span><br><span style="font-size:.55rem;color:var(--muted)">(Real)</span></td>`;
-      LABELS_CM.forEach(pred => {
-        const val = cm[real][pred];
-        const cls = val === 0 ? 'cm-zero' : real === pred ? 'cm-diagonal' : 'cm-off';
-        cmHtml += `<td class="cm-cell-val ${cls}">${val}</td>`;
-      });
-      cmHtml += '</tr>';
-    });
-    cmHtml += '</tbody></table>';
-    document.getElementById('cm-table-container').innerHTML = cmHtml;
-
-    const total   = results.filter(r => r.realLabel !== null).length;
-    const correct = results.filter(r => r.realLabel !== null && r.pred.cat === r.realLabel).length;
-    const acc = (correct / total * 100).toFixed(1);
-    const tp = cm['1']['1'], fp = cm['0']['1'], fn = cm['1']['0'];
-    const prec = tp + fp > 0 ? (tp / (tp + fp) * 100).toFixed(1) : '—';
-    const rec  = tp + fn > 0 ? (tp / (tp + fn) * 100).toFixed(1) : '—';
-    const f1   = prec !== '—' && rec !== '—'
-      ? (2 * parseFloat(prec) * parseFloat(rec) / (parseFloat(prec) + parseFloat(rec))).toFixed(1) : '—';
-
-    document.getElementById('batch-metrics-badges').innerHTML = `
-      <div class="metric-badge"><div class="val">${total}</div><div class="lbl">Registros</div></div>
-      <div class="metric-badge"><div class="val" style="color:var(--green)">${acc}%</div><div class="lbl">Accuracy</div></div>
-      <div class="metric-badge"><div class="val">${prec}%</div><div class="lbl">Precision</div></div>
-      <div class="metric-badge"><div class="val">${f1}%</div><div class="lbl">F1-Score</div></div>`;
-  } else {
-    const total = results.length;
-    const pres  = results.filter(r => r.pred.cat === '1').length;
-    document.getElementById('batch-metrics-badges').innerHTML = `
-      <div class="metric-badge"><div class="val">${total}</div><div class="lbl">Registros</div></div>
-      <div class="metric-badge"><div class="val" style="color:var(--green)">${pres}</div><div class="lbl">Presentes</div></div>
-      <div class="metric-badge"><div class="val" style="color:var(--gold)">${total - pres}</div><div class="lbl">Ausentes</div></div>
-      <div class="metric-badge"><div class="val">${(pres/total*100).toFixed(1)}%</div><div class="lbl">% Presencia</div></div>`;
-  }
-
-  // Donut
-  const counts = ['0','1'].map(c => results.filter(r => r.pred.cat === c).length);
-  const ctx2 = document.getElementById('batchChart').getContext('2d');
-  if (batchChart) batchChart.destroy();
-  batchChart = new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: ['Ausente (0)', 'Presente (1)'],
-      datasets: [{ data: counts,
-        backgroundColor: ['rgba(255,213,79,.7)', 'rgba(0,230,118,.7)'],
-        borderColor: ['#ffd54f', '#00e676'], borderWidth: 2 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 }, padding: 12 } } }
-    }
-  });
-
-  document.getElementById('cm-section').style.display = 'block';
-  setTimeout(() => document.getElementById('cm-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  const pres=results.filter(r=>r.pred.pred==='1').length;
+  const ctx2=document.getElementById('batchChart').getContext('2d');
+  if(batchChartInst)batchChartInst.destroy();
+  batchChartInst=new Chart(ctx2,{type:'doughnut',data:{labels:['Ausente','Presente'],datasets:[{data:[results.length-pres,pres],backgroundColor:['rgba(122,92,66,.3)','rgba(61,107,71,.3)'],borderColor:['var(--earth)','var(--moss)'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'var(--text-mid)',font:{family:'DM Sans',size:11},padding:12}}}}});
+  document.getElementById('cm-section').style.display='block';
+  setTimeout(()=>document.getElementById('cm-section').scrollIntoView({behavior:'smooth',block:'nearest'}),100);
 }
 
-// ==============================
-//  TAB SWITCHER
-// ==============================
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  btn.classList.add('active');
+function selModel(m){currentModel=m;document.getElementById('btn-nn').classList.toggle('active',m==='nn');document.getElementById('btn-lr').classList.toggle('active',m==='lr');document.getElementById('res-empty').style.display='block';document.getElementById('res-empty').textContent='Completa el formulario y presiona Predecir.';document.getElementById('res-content').style.display='none';}
+function selModelBatch(m){currentModelBatch=m;document.getElementById('btn-nn-b').classList.toggle('active',m==='nn');document.getElementById('btn-lr-b').classList.toggle('active',m==='lr');}
+function switchTab(id,btn){document.querySelectorAll('.tab-pane').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tnav').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');}
+
+function initMetrics(){
+  if(metricsChartInst)return;
+  const ctx=document.getElementById('metricsChart').getContext('2d');
+  metricsChartInst=new Chart(ctx,{type:'radar',data:{labels:['Accuracy','Precision','Recall','F1-Score'],
+    datasets:[{label:'Red Neuronal',data:[80.7,69.6,80.0,74.4],borderColor:'var(--moss)',backgroundColor:'rgba(61,107,71,.1)',borderWidth:2,pointBackgroundColor:'var(--moss)'},
+    {label:'Reg. Logística',data:[77.2,68.4,65.0,66.7],borderColor:'var(--water)',backgroundColor:'rgba(74,127,165,.1)',borderWidth:2,pointBackgroundColor:'var(--water)'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{r:{min:60,max:85,ticks:{color:'var(--text-light)',font:{family:'DM Mono',size:9},stepSize:5,backdropColor:'transparent'},grid:{color:'rgba(138,154,142,.2)'},angleLines:{color:'rgba(138,154,142,.2)'},pointLabels:{color:'var(--text-mid)',font:{family:'DM Sans',size:11}}}},
+      plugins:{legend:{labels:{color:'var(--text-mid)',font:{family:'DM Sans',size:12},padding:16}}}}});
 }
 
-// ==============================
-//  GRÁFICA RADAR DE MÉTRICAS
-// ==============================
-function initMetricsChart() {
-  if (metricsChart) return;
-  const ctx = document.getElementById('metricsChart').getContext('2d');
-  metricsChart = new Chart(ctx, {
-    type: 'radar',
-    data: {
-      labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score'],
-      datasets: [
-        { label: 'Red Neuronal',   data: [94.2, 94.1, 90.1, 92.1], borderColor: '#00e5ff', backgroundColor: 'rgba(0,229,255,.1)', borderWidth: 2, pointBackgroundColor: '#00e5ff' },
-        { label: 'Reg. Logística', data: [77.8, 73.0, 64.8, 68.7], borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,.1)', borderWidth: 2, pointBackgroundColor: '#00e676' }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      scales: {
-        r: {
-          min: 60, max: 100,
-          ticks: { color: '#7a9cc8', font: { family: 'Space Mono', size: 9 }, stepSize: 10, backdropColor: 'transparent' },
-          grid: { color: 'rgba(26,58,110,.5)' },
-          angleLines: { color: 'rgba(26,58,110,.5)' },
-          pointLabels: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 } }
-        }
-      },
-      plugins: { legend: { labels: { color: '#7a9cc8', font: { family: 'Space Mono', size: 10 }, padding: 16 } } }
-    }
-  });
-}
+function animateBars(){document.querySelectorAll('.mfill[data-w]').forEach(el=>{el.style.width=Math.min(100,+el.dataset.w)+'%';});}
 
-// ==============================
-//  ANIMAR BARRAS
-// ==============================
-function animateBars() {
-  document.querySelectorAll('.metric-fill[data-width]').forEach(el => {
-    const w = Number(el.getAttribute('data-width'));
-    if (!isNaN(w)) el.style.width = Math.min(100, w) + '%';
-  });
+function initObserver(){
+  const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);}});},{threshold:.08});
+  document.querySelectorAll('.fade-in').forEach(el=>obs.observe(el));
 }
-
-// ==============================
-//  INTERSECTION OBSERVER
-// ==============================
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
-}, { threshold: 0.1 });
 </script>
-
 </body>
 </html>
