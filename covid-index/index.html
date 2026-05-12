@@ -31,8 +31,32 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   radial-gradient(ellipse 50% 60% at 10% 80%,rgba(74,127,165,.07) 0%,transparent 60%),
   radial-gradient(ellipse 70% 50% at 50% 50%,rgba(232,220,200,.4) 0%,transparent 80%);}
 
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#2a4d32 0%,#3d6b47 40%,#4a7fa5 100%);}
+.login-nature-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.login-nature-bg svg{position:absolute;bottom:0;left:0;width:100%;opacity:.15;}
+.login-box{position:relative;z-index:1;background:var(--white);border-radius:var(--radius-lg);
+  padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:var(--shadow-lg);}
+.l-logo{text-align:center;margin-bottom:2rem;}
+.l-frog{font-size:3rem;display:block;margin-bottom:.5rem;}
+.l-brand{font-family:var(--font-display);font-size:1.6rem;color:var(--moss);font-weight:700;}
+.l-sub{font-size:.8rem;color:var(--text-light);margin-top:.25rem;}
+.l-field{margin-bottom:1.1rem;}
+.l-field label{display:block;font-size:.75rem;font-weight:600;color:var(--text-mid);margin-bottom:.4rem;letter-spacing:.03em;}
+.l-field input{width:100%;padding:.65rem .9rem;background:var(--cream);border:1.5px solid var(--stone-light);
+  border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:.9rem;outline:none;
+  transition:border-color .2s,box-shadow .2s;}
+.l-field input:focus{border-color:var(--moss);box-shadow:0 0 0 3px rgba(61,107,71,.12);}
+.l-btn{width:100%;margin-top:.5rem;padding:.8rem;background:linear-gradient(135deg,var(--moss),var(--moss-dark));
+  border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--font-body);font-size:.9rem;
+  font-weight:600;cursor:pointer;transition:all .3s;letter-spacing:.02em;}
+.l-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(61,107,71,.4);}
+.l-err{font-size:.75rem;color:var(--danger);text-align:center;margin-top:.75rem;min-height:1rem;}
+.l-hint{font-size:.7rem;color:var(--stone);text-align:center;margin-top:1rem;}
+
 /* APP */
-#app{display:block;position:relative;z-index:1;}
+#app{display:none;position:relative;z-index:1;}
 
 /* HEADER */
 header{position:sticky;top:0;z-index:100;background:rgba(253,252,249,.95);backdrop-filter:blur(12px);
@@ -52,6 +76,11 @@ nav a:hover{color:var(--moss);background:rgba(61,107,71,.08);}
   padding:.3rem .75rem;background:rgba(106,170,114,.12);border:1px solid rgba(106,170,114,.3);border-radius:20px;}
 .status-dot{width:7px;height:7px;background:var(--leaf);border-radius:50%;animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+.logout-btn{background:transparent;border:1.5px solid var(--stone-light);color:var(--text-light);
+  font-family:var(--font-body);font-size:.78rem;padding:.35rem .8rem;border-radius:var(--radius-sm);
+  cursor:pointer;transition:all .2s;}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
 /* MAIN */
 main{max-width:1240px;margin:0 auto;padding:0 1.5rem 5rem;}
 
@@ -307,6 +336,28 @@ footer strong{color:var(--moss);}
 </style>
 </head>
 <body>
+  
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-nature-bg">
+    <svg viewBox="0 0 1440 200" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,160 Q180,80 360,140 Q540,200 720,120 Q900,40 1080,110 Q1260,180 1440,100 L1440,200 L0,200 Z" fill="white"/>
+    </svg>
+  </div>
+  <div class="login-box">
+    <div class="l-logo">
+      <span class="l-frog">🐸</span>
+      <div class="l-brand">AmphibiaML</div>
+      <div class="l-sub">Plataforma de Monitoreo Ecológico </div>
+    </div>
+    <div class="l-field"><label>Usuario</label><input type="text" id="l-user" placeholder="Ingresa tu usuario" autocomplete="off"></div>
+    <div class="l-field"><label>Contraseña</label><input type="password" id="l-pass" placeholder="Ingresa tu contraseña"></div>
+    <button class="l-btn" onclick="doLogin()">🌿 Ingresar al Sistema</button>
+    <div class="l-err" id="l-err"></div>
+    <div class="l-hint">usuario: admin &nbsp;·&nbsp; contraseña: anfibios2026</div>
+  </div>
+</div>
+
 
 <!-- APP -->
 <div id="app">
@@ -319,6 +370,7 @@ footer strong{color:var(--moss);}
     </nav>
     <div class="hdr-right">
       <div class="status-badge" id="status-badge"><span class="status-dot"></span><span id="status-text">Conectando...</span></div>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
   </div>
 </header>
@@ -434,7 +486,7 @@ footer strong{color:var(--moss);}
 <section id="resultados" class="fade-in">
   <div class="sec-label">04 · Resultados</div>
   <h2 class="sec-title">Rendimiento de los Modelos</h2>
-  <p class="sec-desc">Evaluación comparativa de la Red Neuronal y la Regresión Logística sobre el conjunto de prueba (30%, random_state=52).</p>
+  <p class="sec-desc">Evaluación comparativa de la Red Neuronal y la Regresión Logística .</p>
   <div class="metrics-hero">
     <div class="metric-box"><div class="val" style="color:var(--moss)">80.7%</div><div class="lbl">MLP Accuracy</div></div>
     <div class="metric-box"><div class="val" style="color:var(--moss)">74.4%</div><div class="lbl">MLP F1-Score</div></div>
@@ -634,11 +686,27 @@ let currentModel='nn', currentModelBatch='nn';
 let probChartInst=null, batchChartInst=null, metricsChartInst=null;
 let csvData=null;
 
-// Initialize app directly without login
-setTimeout(()=>{animateBars();initMetrics();},400);
-initObserver(); checkBackend();
-
-document.addEventListener('keydown',e=>{});
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim();
+  const p=document.getElementById('l-pass').value.trim();
+  const e=document.getElementById('l-err');
+  if(!u||!p){e.textContent='Completa todos los campos.';return;}
+  if(u==='admin'&&p==='anfibios2026'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    e.textContent='';
+    setTimeout(()=>{animateBars();initMetrics();},400);
+    initObserver(); checkBackend();
+  } else {e.textContent='Usuario o contraseña incorrectos.';document.getElementById('l-pass').value='';}
+}
+function doLogout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-user').value='';document.getElementById('l-pass').value='';
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();
+});
 
 const API='https://amphibians-backend.onrender.com';
 
